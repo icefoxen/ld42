@@ -89,6 +89,7 @@ impl MainState {
         let world = world::World::new(ctx, resource_dir.clone());
         let mut scenestack = scenes::FSceneStack::new(ctx, world);
         let initial_scene = Box::new(scenes::level::LevelScene::new(ctx, &mut scenestack.world));
+        graphics::set_background_color(ctx, graphics::BLACK);
         scenestack.push(initial_scene);
         MainState {
             scenes: scenestack,

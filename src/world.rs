@@ -25,7 +25,7 @@ impl World {
     fn register_components(&mut self) {
         self.specs_world.register::<Position>();
         self.specs_world.register::<Motion>();
-        self.specs_world.register::<Shot>();
+        self.specs_world.register::<Mass>();
         self.specs_world.register::<Player>();
     }
 
@@ -54,18 +54,6 @@ impl World {
         };
 
         the_world.register_components();
-
-        // Make a test entity.
-        the_world
-            .specs_world
-            .create_entity()
-            .with(Position(Point2::new(0.0, 0.0)))
-            .with(Motion {
-                velocity: Vector2::new(1.0, 1.0),
-                acceleration: Vector2::new(0.0, 0.0),
-            })
-            .build();
-
         the_world
     }
 }

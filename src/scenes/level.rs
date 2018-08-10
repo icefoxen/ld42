@@ -5,11 +5,12 @@ use specs::{self, Join};
 use warmy;
 
 use input;
-use components as c;
+use components::*;
 use scenes::*;
 use systems::*;
 use resources;
 use world::World;
+use util::*;
 
 pub struct LevelScene {
     done: bool,
@@ -24,6 +25,20 @@ impl LevelScene {
             .assets
             .get::<_, resources::Image>(&warmy::FSKey::new("/images/kiwi.png"), ctx)
             .unwrap();
+
+
+        // Make a test entity.
+        world
+            .specs_world
+            .create_entity()
+            .with(Position(Point2::new(10.0, 10.0)))
+            .with(Motion {
+                velocity: Vector2::new(1.0, 0.0),
+                acceleration: Vector2::new(0.0, 0.0),
+            })
+            .with(Mass {})
+            .build();
+
         let dispatcher = Self::register_systems();
         LevelScene {
             done,
@@ -35,8 +50,14 @@ impl LevelScene {
 
 
     fn register_systems() -> specs::Dispatcher<'static, 'static> {
+        let gravity = GravitySystem {
+            position: Point2::new(0.0, 0.0),
+            force: 1.0,
+        };
         specs::DispatcherBuilder::new()
             .add(MovementSystem, "sys_movement", &[])
+            .add(gravity, "sys_gravity", &[])
+            .add(DebugPrinterSystem {}, "sys_debugprint", &[])
             .build()
     }
 }
@@ -53,7 +74,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     }
 
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
-        let pos = gameworld.specs_world.read::<c::Position>();
+        let pos = gameworld.specs_world.read::<Position>();
         for p in pos.join() {
             graphics::draw(ctx, &(self.kiwi.borrow().0), p.0, 0.0)?;
         }

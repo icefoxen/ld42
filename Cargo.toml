@@ -5,6 +5,9 @@ authors = ["Simon Heath <icefoxen@gmail.com>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
+[profile.dev]
+opt-level = 1
+
 [dependencies]
 # Game stuff
 ggez = "0.4"

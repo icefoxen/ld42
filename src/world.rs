@@ -18,6 +18,7 @@ pub struct World {
     pub assets: warmy::Store<ggez::Context>,
     pub input: input::InputState,
     pub specs_world: specs::World,
+    pub quit: bool,
 }
 
 impl World {
@@ -26,6 +27,8 @@ impl World {
         self.specs_world.register::<Motion>();
         self.specs_world.register::<Mass>();
         self.specs_world.register::<Player>();
+        self.specs_world.register::<Sprite>();
+        self.specs_world.register::<Mesh>();
     }
 
     pub fn new(ctx: &mut ggez::Context, resource_dir: Option<path::PathBuf>) -> Self {
@@ -50,6 +53,7 @@ impl World {
             assets: store,
             input: ginput::InputState::new(),
             specs_world: w,
+            quit: false,
         };
 
         the_world.register_components();

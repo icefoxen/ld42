@@ -10,7 +10,7 @@ extern crate ggez_goodies;
 #[macro_use]
 extern crate log;
 extern crate nalgebra;
-extern crate ncollide;
+extern crate ncollide2d;
 extern crate specs;
 #[macro_use]
 extern crate specs_derive;
@@ -90,9 +90,10 @@ impl MainState {
     pub fn new(resource_dir: Option<path::PathBuf>, ctx: &mut Context) -> Self {
         let world = world::World::new(ctx, resource_dir.clone());
         let mut scenestack = scenes::FSceneStack::new(ctx, world);
-        let initial_scene = Box::new(scenes::level::LevelScene::new(ctx, &mut scenestack.world));
+        let initial_scene = scenes::level::LevelScene::new(ctx, &mut scenestack.world)
+            .expect("Could not create initial scene?!");
         graphics::set_background_color(ctx, graphics::BLACK);
-        scenestack.push(initial_scene);
+        scenestack.push(Box::new(initial_scene));
         MainState {
             scenes: scenestack,
             input_binding: input::create_input_binding(),
@@ -107,6 +108,10 @@ impl EventHandler for MainState {
             self.scenes.update();
         }
         self.scenes.world.assets.sync(ctx);
+
+        if self.scenes.world.quit {
+            ctx.quit()?;
+        }
 
         Ok(())
     }

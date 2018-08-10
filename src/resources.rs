@@ -32,7 +32,7 @@ pub struct TestAsset;
 
 impl<C> warmy::Load<C> for TestAsset {
     type Key = warmy::key::LogicalKey;
-    type Error = failure::Compat<GgezError>;
+    type Error = failure::Compat<Err>;
     fn load(
         key: Self::Key,
         _store: &mut warmy::Storage<C>,
@@ -48,7 +48,7 @@ impl<C> warmy::Load<C> for TestAsset {
 pub struct Image(pub graphics::Image);
 impl warmy::Load<ggez::Context> for Image {
     type Key = warmy::FSKey;
-    type Error = failure::Compat<GgezError>;
+    type Error = failure::Compat<Err>;
     fn load(
         key: Self::Key,
         store: &mut warmy::Storage<ggez::Context>,
@@ -59,7 +59,7 @@ impl warmy::Load<ggez::Context> for Image {
         debug!("Loading image {:?} from file {:?}", path, key.as_path());
         graphics::Image::new(ctx, path)
             .map(|x| warmy::Loaded::from(Image(x)))
-            .map_err(|e| GgezError::from(e).compat())
+            .map_err(|e| Err::from(e).compat())
     }
 }
 
@@ -68,7 +68,7 @@ impl warmy::Load<ggez::Context> for Image {
 pub struct SoundData(pub audio::SoundData);
 impl warmy::Load<ggez::Context> for SoundData {
     type Key = warmy::FSKey;
-    type Error = failure::Compat<GgezError>;
+    type Error = failure::Compat<Err>;
     fn load(
         key: Self::Key,
         store: &mut warmy::Storage<ggez::Context>,
@@ -79,7 +79,7 @@ impl warmy::Load<ggez::Context> for SoundData {
 
         audio::SoundData::new(ctx, path)
             .map(|x| warmy::Loaded::from(SoundData(x)))
-            .map_err(|e| GgezError::from(e).compat())
+            .map_err(|e| Err::from(e).compat())
     }
 }
 
@@ -91,7 +91,7 @@ impl warmy::Load<ggez::Context> for SoundData {
 pub struct Font(pub graphics::Font);
 impl warmy::Load<ggez::Context> for Font {
     type Key = warmy::FSKey;
-    type Error = failure::Compat<GgezError>;
+    type Error = failure::Compat<Err>;
     fn load(
         key: Self::Key,
         store: &mut warmy::Storage<ggez::Context>,
@@ -102,6 +102,6 @@ impl warmy::Load<ggez::Context> for Font {
 
         graphics::Font::new(ctx, path, 12)
             .map(|x| warmy::Loaded::from(Font(x)))
-            .map_err(|e| GgezError::from(e).compat())
+            .map_err(|e| Err::from(e).compat())
     }
 }

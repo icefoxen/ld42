@@ -1,11 +1,13 @@
 use ggez;
 use ggez::graphics;
 use ggez_goodies::scene;
+use ncollide2d as nc;
 use specs::{self, Join};
 use warmy;
 
 use input;
 use components::*;
+use error::Err;
 use scenes::*;
 use systems::*;
 use resources;
@@ -14,12 +16,13 @@ use util::*;
 
 pub struct LevelScene {
     done: bool,
+    ball: nc::shape::Ball<f32>,
     kiwi: warmy::Res<resources::Image>,
     dispatcher: specs::Dispatcher<'static, 'static>,
 }
 
 impl LevelScene {
-    pub fn new(ctx: &mut ggez::Context, world: &mut World) -> Self {
+    pub fn new(ctx: &mut ggez::Context, world: &mut World) -> Result<Self, Err> {
         let done = false;
         let kiwi = world
             .assets
@@ -27,7 +30,7 @@ impl LevelScene {
             .unwrap();
 
 
-        // Make a test entity.
+        // Make the player.
         world
             .specs_world
             .create_entity()
@@ -37,14 +40,31 @@ impl LevelScene {
                 acceleration: Vector2::new(0.0, 0.0),
             })
             .with(Mass {})
+            .with(Sprite {})
             .build();
 
+        // Make the world thingy
+        world.specs_world
+            .create_entity()
+            .with(Position(Point2::new(0.0, 0.0)))
+            .with(Mesh {
+                mesh: graphics::MeshBuilder::default()
+                    .circle(graphics::DrawMode::Fill,
+                        graphics::Point2::new(0.0, 0.0), 10.0, 1.0)
+                    .build(ctx)?
+            })
+            .build()
+        ;
+
+        let ball = nc::shape::Ball::new(10.0);
+
         let dispatcher = Self::register_systems();
-        LevelScene {
+        Ok(LevelScene {
             done,
+            ball,
             kiwi,
             dispatcher
-        }
+        })
     }
 
 
@@ -75,8 +95,14 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
 
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
         let pos = gameworld.specs_world.read::<Position>();
-        for p in pos.join() {
+        let sprite = gameworld.specs_world.read::<Sprite>();
+        let mesh = gameworld.specs_world.read::<Mesh>();
+        for (p, _) in (&pos, &sprite).join() {
             graphics::draw(ctx, &(self.kiwi.borrow().0), graphics::Point2::new(p.0.x, p.0.y), 0.0)?;
+        }
+
+        for (p, mesh) in (&pos, &mesh).join() {
+            graphics::draw(ctx, &mesh.mesh, graphics::Point2::new(p.0.x, p.0.y), 0.0)?;
         }
         Ok(())
     }
@@ -88,7 +114,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn input(&mut self, gameworld: &mut World, ev: input::InputEvent, _started: bool) {
         debug!("Input: {:?}", ev);
         if gameworld.input.get_button_pressed(input::Button::Menu) {
-            self.done = true;
+            gameworld.quit = true;
         }
     }
 }

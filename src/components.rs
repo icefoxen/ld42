@@ -1,7 +1,8 @@
-use util::*;
+use ggez;
 use specs::*;
-
-//use util::*;
+use warmy;
+use resources;
+use util::*;
 
 /// ///////////////////////////////////////////////////////////////////////
 /// Components
@@ -23,7 +24,23 @@ pub struct Motion {
 pub struct Mass {
 }
 
-// Just a marker that a particular entity is the player.
+/// Just a marker that a particular entity is the player.
 #[derive(Clone, Debug, Default, Component)]
 #[component(NullStorage)]
 pub struct Player;
+
+
+/// Sprite marker
+#[derive(Clone, Debug, Default, Component)]
+#[component(NullStorage)]
+pub struct Sprite {
+    //image: warmy::Res<resources::Image>,
+}
+
+
+/// Mesh
+#[derive(Clone, Debug, Component)]
+#[component(NullStorage)]
+pub struct Mesh {
+    pub mesh: ggez::graphics::Mesh,
+}

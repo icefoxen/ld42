@@ -3,13 +3,15 @@
 use ggez;
 
 #[derive(Debug, Fail)]
-#[fail(display = "ggez error: {:?}", err)]
-pub struct GgezError {
-    err: ggez::GameError,
+pub enum Err {
+    #[fail(display = "ggez error: {:?}", err)]
+    GgezError {
+        err: ggez::GameError,
+    },
 }
 
-impl From<ggez::GameError> for GgezError {
+impl From<ggez::GameError> for Err {
     fn from(err: ggez::GameError) -> Self {
-        Self { err }
+        Err::GgezError { err }
     }
 }

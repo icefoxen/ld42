@@ -1,0 +1,20 @@
+[package]
+name = "ggez_game_template"
+version = "0.1.0"
+authors = ["Simon Heath <icefoxen@gmail.com>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[dependencies]
+# Game stuff
+ggez = "0.4"
+ggez-goodies = { git = "https://github.com/ggez/ggez-goodies", branch = "master" }
+specs = "0.10"
+specs-derive = "0.1"
+warmy = "0.7"
+
+# Utility stuff
+log = "0.4"
+fern = {version = "0.5", features = ["colored"] }
+chrono = "0.4"
+failure = "0.1"

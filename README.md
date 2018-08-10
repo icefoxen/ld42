@@ -1,2 +1,4 @@
-# ld42
-Ludum Dare 42
+# LD42 game
+
+Woohoo!  Theme: "Running out of space".
+

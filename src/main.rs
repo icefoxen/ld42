@@ -9,6 +9,8 @@ extern crate ggez;
 extern crate ggez_goodies;
 #[macro_use]
 extern crate log;
+extern crate nalgebra;
+extern crate ncollide;
 extern crate specs;
 #[macro_use]
 extern crate specs_derive;

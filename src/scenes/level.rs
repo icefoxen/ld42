@@ -76,7 +76,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
         let pos = gameworld.specs_world.read::<Position>();
         for p in pos.join() {
-            graphics::draw(ctx, &(self.kiwi.borrow().0), p.0, 0.0)?;
+            graphics::draw(ctx, &(self.kiwi.borrow().0), graphics::Point2::new(p.0.x, p.0.y), 0.0)?;
         }
         Ok(())
     }

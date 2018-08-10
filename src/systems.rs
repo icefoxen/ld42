@@ -1,7 +1,7 @@
 //! specs systems.
 use specs::{self, Join};
-use ggez::graphics::{Point2};
-use ggez::nalgebra as na;
+use nalgebra as na;
+use util::{Point2, Vector2};
 
 use components::*;
 

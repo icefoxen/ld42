@@ -5,7 +5,6 @@
 
 use ggez;
 use ggez_goodies::input as ginput;
-use ggez::graphics::{Point2, Vector2};
 use specs;
 
 use warmy;

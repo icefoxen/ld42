@@ -24,8 +24,8 @@ pub struct Mass {}
 pub struct Player {
     pub on_ground: bool,
     pub jumping: bool,
-    pub walk_direction: f32,
-    pub walk_force: f32,
+    pub velocity: f32,
+    pub run_acceleration: f32,
 }
 
 /// NCollide collision object handle.

@@ -66,6 +66,7 @@ impl LevelScene {
     fn create_player(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32) -> Result<specs::Entity, Err> {
         let player_halfwidth = 10.0;
         let player_halfheight = 20.0;
+        let run_acceleration = 0.01;
         let player_offset = planet_radius + player_halfheight*3.0;
         // Make the player entity
         let entity = world
@@ -74,8 +75,8 @@ impl LevelScene {
             .with(Player {
                 on_ground: false,
                 jumping: false,
-                walk_direction: 0.0,
-                walk_force: 0.1,
+                velocity: 0.0,
+                run_acceleration,
             })
             .with(Motion {
                 velocity: Vector2::new(1.5, 0.0),
@@ -265,9 +266,10 @@ impl LevelScene {
                 // Walk
                 use std::f32;
                 let rot = na::Rotation2::new(f32::consts::PI / 2.0);
-                let walk_direction = rot * (normal * player.walk_direction);
-                player_motion.acceleration += walk_direction * player.walk_force;
+                let run_speed = rot * (normal * player.velocity);
+                player_motion.acceleration += run_speed * player.run_acceleration;
             }
+            player.velocity += player.run_acceleration;
             player_motion.velocity += player_motion.acceleration;
             player_motion.acceleration = na::zero();
 
@@ -373,13 +375,20 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
             )?;
         }
 
-        if self.collided {
-            let t = ggez::graphics::TextCached::new("Collision")?;
-            t.queue(ctx, graphics::Point2::new(100.0, 200.0), None);
+        let player_storage = gameworld.specs_world.read_storage::<Player>();
+        let player_component = player_storage.get(self.player_entity).expect("No player?");
+
+        let text_point = graphics::Point2::new(10.0, 10.0);
+        let velocity_point = graphics::Point2::new(10.0, 30.0);
+        if player_component.on_ground {
+            let t = ggez::graphics::TextCached::new("On ground")?;
+            t.queue(ctx, text_point, None);
         } else {
-            let t = ggez::graphics::TextCached::new("No collision")?;
-            t.queue(ctx, graphics::Point2::new(100.0, 200.0), None);
+            let t = ggez::graphics::TextCached::new("Not on ground")?;
+            t.queue(ctx, text_point, None);
         }
+        let t = ggez::graphics::TextCached::new(format!("Velocity: {}", player_component.velocity))?;
+        t.queue(ctx, velocity_point, None);
         graphics::TextCached::draw_queued(ctx, graphics::DrawParam::default())?;
         Ok(())
     }
@@ -394,7 +403,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         }
         if let Some(player) = gameworld.specs_world.write_storage::<Player>().get_mut(self.player_entity) {
             player.jumping = gameworld.input.get_button_pressed(input::Button::Jump);
-            player.walk_direction = gameworld.input.get_axis(input::Axis::Horz);
+            // player.walk_direction = gameworld.input.get_axis(input::Axis::Horz);
         }
     }
 }

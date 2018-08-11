@@ -19,6 +19,7 @@ pub struct LevelScene {
     done: bool,
     kiwi: warmy::Res<resources::Image>,
     dispatcher: specs::Dispatcher<'static, 'static>,
+    collided: bool,
 }
 
 impl LevelScene {
@@ -40,7 +41,7 @@ impl LevelScene {
         let planet_collider = {
             let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
             let planet_handle = collide_world.add(
-                na::Isometry2::new(na::zero(), na::zero()),
+                na::Isometry2::new(Vector2::new(100.0, 100.0), na::zero()),
                 nc::shape::ShapeHandle::new(ball.clone()),
                 terrain_collide_group,
                 query_type,
@@ -77,7 +78,7 @@ impl LevelScene {
         let player_collider = {
             let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
             let player_handle = collide_world.add(
-                na::Isometry2::new(na::Vector2::new(10.0, 10.0), na::zero()),
+                na::Isometry2::new(na::Vector2::new(110.0, 110.0), na::zero()),
                 nc::shape::ShapeHandle::new(ball.clone()),
                 player_collide_group,
                 query_type,
@@ -98,7 +99,7 @@ impl LevelScene {
                 orientation: 0.0,
             })
             .with(Motion {
-                velocity: Vector2::new(1.0, 0.0),
+                velocity: Vector2::new(1.5, 0.0),
                 acceleration: Vector2::new(0.0, 0.0),
             })
             .with(Mass {})
@@ -110,12 +111,13 @@ impl LevelScene {
             done,
             kiwi,
             dispatcher,
+            collided: false,
         })
     }
 
     fn register_systems() -> specs::Dispatcher<'static, 'static> {
         let gravity = GravitySystem {
-            position: Point2::new(0.0, 0.0),
+            position: Point2::new(100.0, 100.0),
             force: 1.0,
         };
         specs::DispatcherBuilder::new()
@@ -131,9 +133,17 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn update(&mut self, gameworld: &mut World) -> FSceneSwitch {
         self.dispatcher.dispatch(&mut gameworld.specs_world.res);
 
-        let collide_world = gameworld.specs_world.read_resource::<CollisionWorld>();
+        let mut collide_world = gameworld.specs_world.write_resource::<CollisionWorld>();
+        collide_world.update();
         for e in collide_world.contact_events() {
-            println!("{:?}", e);
+            match e {
+                nc::events::ContactEvent::Started(_, _) => {
+                    self.collided = true;
+                },
+                nc::events::ContactEvent::Stopped(_, _) => {
+                    self.collided = false;
+                }
+            }
         }
 
         if self.done {
@@ -185,6 +195,15 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
                 },
             )?;
         }
+
+        if self.collided {
+            let t = ggez::graphics::TextCached::new("Collision")?;
+            t.queue(ctx, graphics::Point2::new(100.0, 200.0), None);
+        } else {
+            let t = ggez::graphics::TextCached::new("No collision")?;
+            t.queue(ctx, graphics::Point2::new(100.0, 200.0), None);
+        }
+        graphics::TextCached::draw_queued(ctx, graphics::DrawParam::default())?;
         Ok(())
     }
 

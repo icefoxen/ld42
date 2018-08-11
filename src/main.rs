@@ -149,7 +149,7 @@ impl EventHandler for MainState {
 
 pub fn main() {
     setup_logger().expect("Could not set up logging!");
-    let mut cb = ContextBuilder::new("game-template", "ggez")
+    let mut cb = ContextBuilder::new("ld42", "icefoxen")
         .window_setup(conf::WindowSetup::default().title("game-template"))
         .window_mode(conf::WindowMode::default().dimensions(800, 600));
 

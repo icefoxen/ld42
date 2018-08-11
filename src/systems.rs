@@ -29,6 +29,7 @@ pub struct GravitySystem {
     pub force: f32,
 }
 
+/// TODO: Make this use a proper fucking position component instead of having its own.
 impl<'a> specs::System<'a> for GravitySystem {
     type SystemData = (
         specs::WriteStorage<'a, Motion>,

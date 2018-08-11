@@ -22,7 +22,11 @@ pub struct LevelScene {
     collided: bool,
     player_entity: specs::Entity,
     planet_entity: specs::Entity,
+    camera_focus: Point2,
 }
+
+const CAMERA_WIDTH: f32 = 800.0;
+const CAMERA_HEIGHT: f32 = 600.0;
 
 impl LevelScene {
     pub fn new(ctx: &mut ggez::Context, world: &mut World) -> Result<Self, Err> {
@@ -34,8 +38,9 @@ impl LevelScene {
 
         let dispatcher = Self::register_systems();
 
-        let planet_entity = Self::create_planet(ctx, world)?;
-        let player_entity = Self::create_player(ctx, world)?;
+        let planet_radius = 2000.0;
+        let planet_entity = Self::create_planet(ctx, world, planet_radius)?;
+        let player_entity = Self::create_player(ctx, world, planet_radius)?;
 
         Ok(LevelScene {
             done,
@@ -44,6 +49,7 @@ impl LevelScene {
             player_entity,
             planet_entity,
             collided: false,
+            camera_focus: na::origin(),
         })
     }
 
@@ -57,7 +63,10 @@ impl LevelScene {
             .build()
     }
 
-    fn create_player(ctx: &mut ggez::Context, world: &mut World) -> Result<specs::Entity, Err> {
+    fn create_player(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32) -> Result<specs::Entity, Err> {
+        let player_halfwidth = 10.0;
+        let player_halfheight = 20.0;
+        let player_offset = planet_radius + player_halfheight*3.0;
         // Make the player entity
         let entity = world
             .specs_world
@@ -75,18 +84,21 @@ impl LevelScene {
             .with(Mass {})
             .with(Mesh {
                 mesh: graphics::MeshBuilder::default()
-                    .circle(
+                    .polygon(
                         graphics::DrawMode::Line(2.0),
-                        graphics::Point2::new(0.0, 0.0),
-                        10.0,
-                        0.5,
+                        &[
+                            graphics::Point2::new(-player_halfwidth, -player_halfheight),
+                            graphics::Point2::new(-player_halfwidth, player_halfheight),
+                            graphics::Point2::new(player_halfwidth, player_halfheight),
+                            graphics::Point2::new(player_halfwidth, -player_halfheight),
+                        ],
                     )
                     .build(ctx)?,
             })
             .build();
 
         // Player collision info
-        let ball = nc::shape::Ball::new(10.0);
+        let shape = nc::shape::Cuboid::new(Vector2::new(player_halfwidth, player_halfheight));
         let mut player_collide_group = nc::world::CollisionGroups::new();
         player_collide_group.set_membership(&[2]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
@@ -94,8 +106,8 @@ impl LevelScene {
         let player_collider = {
             let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
             let player_handle = collide_world.add(
-                na::Isometry2::new(na::Vector2::new(220.0, 120.0), na::zero()),
-                nc::shape::ShapeHandle::new(ball.clone()),
+                na::Isometry2::new(na::Vector2::new(0.0, -player_offset), na::zero()),
+                nc::shape::ShapeHandle::new(shape.clone()),
                 player_collide_group,
                 query_type,
                 entity,
@@ -110,7 +122,8 @@ impl LevelScene {
         Ok(entity)
     }
 
-    fn create_planet(ctx: &mut ggez::Context, world: &mut World) -> Result<specs::Entity, Err> {
+    fn create_planet(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32) -> Result<specs::Entity, Err> {
+        let gravity = 200.0;
         // Make the world entity
         let entity = world
             .specs_world
@@ -120,19 +133,19 @@ impl LevelScene {
                     .circle(
                         graphics::DrawMode::Fill,
                         graphics::Point2::new(0.0, 0.0),
-                        100.0,
-                        2.0,
+                        planet_radius,
+                        0.1,
                     )
                     .build(ctx)?,
             })
             .with(Gravity {
-                    force: 15.0,
+                    force: gravity,
                 }
             )
             .build();
 
         // Planet collision info
-        let ball = nc::shape::Ball::new(100.0);
+        let ball = nc::shape::Ball::new(planet_radius);
         let mut terrain_collide_group = nc::world::CollisionGroups::new();
         terrain_collide_group.set_membership(&[1]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
@@ -140,7 +153,7 @@ impl LevelScene {
         let planet_collider = {
             let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
             let planet_handle = collide_world.add(
-                na::Isometry2::new(Vector2::new(100.0, 100.0), na::zero()),
+                na::Isometry2::new(Vector2::new(0.0, 0.0), na::zero()),
                 nc::shape::ShapeHandle::new(ball.clone()),
                 terrain_collide_group,
                 query_type,
@@ -224,7 +237,7 @@ impl LevelScene {
                 .expect("Player w/o motion?");
             let player_collider = colliders.get(self.player_entity)
                 .expect("Player w/o motion?");
-            let (player_position, player_rotation) = collision_object_position(&*ncollide_world, &player_collider);
+            let (player_position, _player_rotation) = collision_object_position(&*ncollide_world, &player_collider);
             let planet_collider = colliders.get(self.planet_entity)
                 .expect("Planet w/o collider?");
             let (planet_position, _planet_rotation) = collision_object_position(&*ncollide_world, planet_collider);
@@ -258,6 +271,9 @@ impl LevelScene {
             player_motion.velocity += player_motion.acceleration;
             player_motion.acceleration = na::zero();
 
+            // Rotate to stand upright on planet.
+            let player_angle = f32::atan2(offset.x, -offset.y);
+
             let new_position = {
                 let collision_obj = ncollide_world
                     .collision_object(player_collider.object_handle)
@@ -266,9 +282,11 @@ impl LevelScene {
                     );
                 let mut new_position = collision_obj.position().clone();
                 new_position.append_translation_mut(&na::Translation::from_vector(player_motion.velocity));
+                new_position.rotation = na::UnitComplex::from_angle(player_angle);
                 new_position
             };
             ncollide_world.set_position(player_collider.object_handle, new_position);
+            self.camera_focus = Point2::new(new_position.translation.vector.x, new_position.translation.vector.y);
         }
     }
 }
@@ -317,6 +335,14 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     }
 
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
+        // Focus view on player.
+        let screen_rect = graphics::Rect {
+            x: self.camera_focus.x - CAMERA_WIDTH/2.0,
+            y: self.camera_focus.y - CAMERA_HEIGHT/2.0,
+            w: CAMERA_WIDTH,
+            h: CAMERA_HEIGHT,
+        };
+        graphics::set_screen_coordinates(ctx, screen_rect)?;
         let sprite = gameworld.specs_world.read_storage::<Sprite>();
         let mesh = gameworld.specs_world.read_storage::<Mesh>();
         let collider = gameworld.specs_world.read_storage::<Collider>();

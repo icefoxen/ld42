@@ -9,11 +9,14 @@ use util::*;
 /// Components
 /// ///////////////////////////////////////////////////////////////////////
 #[derive(Clone, Debug, Component)]
-#[component(VecStorage)]
-pub struct Position(pub Point2);
+#[storage(VecStorage)]
+pub struct Position {
+    pub position: Point2,
+    pub orientation: f32,
+}
 
 #[derive(Clone, Debug, Component)]
-#[component(VecStorage)]
+#[storage(VecStorage)]
 pub struct Motion {
     pub velocity: Vector2,
     pub acceleration: Vector2,
@@ -21,33 +24,33 @@ pub struct Motion {
 
 /// Objects without one won't get affected by the `Gravity` system.
 #[derive(Clone, Debug, Component)]
-#[component(VecStorage)]
+#[storage(VecStorage)]
 pub struct Mass {
 }
 
 /// Just a marker that a particular entity is the player.
-#[derive(Clone, Debug, Default, Component)]
-#[component(NullStorage)]
+#[derive(Clone, Debug, Component)]
+#[storage(VecStorage)]
 pub struct Player;
 
 /// NCollide collision object handle
 #[derive(Clone, Debug, Component)]
-#[component(VecStorage)]
+#[storage(VecStorage)]
 pub struct Collider {
     pub object: nc::world::CollisionObjectHandle,
 }
 
 /// Sprite marker.
 /// Should someday say something about what sprite to draw.
-#[derive(Clone, Debug, Default, Component)]
-#[component(NullStorage)]
+#[derive(Clone, Debug, Component)]
+#[storage(VecStorage)]
 pub struct Sprite {
     //image: warmy::Res<resources::Image>,
 }
 
 /// Mesh
 #[derive(Clone, Debug, Component)]
-#[component(NullStorage)]
+#[storage(VecStorage)]
 pub struct Mesh {
     pub mesh: ggez::graphics::Mesh,
 }

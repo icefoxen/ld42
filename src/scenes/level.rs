@@ -3,7 +3,7 @@ use ggez::graphics;
 use ggez_goodies::scene;
 use ncollide2d as nc;
 use nalgebra as na;
-use specs::{self, Join};
+use specs::{self, Join, Builder};
 use warmy;
 
 use input;
@@ -19,7 +19,6 @@ pub struct LevelScene {
     done: bool,
     kiwi: warmy::Res<resources::Image>,
     dispatcher: specs::Dispatcher<'static, 'static>,
-    collide_world: nc::world::CollisionWorld<f32, ()>,
 }
 
 impl LevelScene {
@@ -35,7 +34,10 @@ impl LevelScene {
         world
             .specs_world
             .create_entity()
-            .with(Position(Point2::new(10.0, 10.0)))
+            .with(Position {
+                position: Point2::new(10.0, 10.0),
+                orientation: 0.0,
+            })
             .with(Motion {
                 velocity: Vector2::new(1.0, 0.0),
                 acceleration: Vector2::new(0.0, 0.0),
@@ -51,23 +53,28 @@ impl LevelScene {
         terrain_collide_group.set_membership(&[1]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
 
-        let mut collide_world = nc::world::CollisionWorld::new(0.02);
-        let planet_handle = collide_world.add(
-            na::Isometry2::new(na::zero(), na::zero()),
-            nc::shape::ShapeHandle::new(ball.clone()),
-            terrain_collide_group,
-            query_type,
-            ()
-        );
+        let planet_collider = {
+            let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
+            let planet_handle = collide_world.add(
+                na::Isometry2::new(na::zero(), na::zero()),
+                nc::shape::ShapeHandle::new(ball.clone()),
+                terrain_collide_group,
+                query_type,
+                ()
+            );
 
-        let planet_collider = Collider {
-            object: planet_handle,
+            Collider {
+                object: planet_handle,
+            }
         };
 
         // Make the world object thingy
         world.specs_world
             .create_entity()
-            .with(Position(Point2::new(0.0, 0.0)))
+            .with(Position {
+                position: Point2::new(0.0, 0.0),
+                orientation: 0.0,
+            })
             .with(Mesh {
                 mesh: graphics::MeshBuilder::default()
                     .circle(graphics::DrawMode::Fill,
@@ -81,7 +88,6 @@ impl LevelScene {
             done,
             kiwi,
             dispatcher,
-            collide_world,
         })
     }
 
@@ -93,9 +99,9 @@ impl LevelScene {
             force: 1.0,
         };
         specs::DispatcherBuilder::new()
-            .add(MovementSystem, "sys_movement", &[])
-            .add(gravity, "sys_gravity", &[])
-            // .add(DebugPrinterSystem {}, "sys_debugprint", &[])
+            .with(MovementSystem, "sys_movement", &[])
+            .with(gravity, "sys_gravity", &["sys_movement"])
+            // .with(DebugPrinterSystem {}, "sys_debugprint", &[])
             .build()
     }
 }
@@ -105,7 +111,8 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         self.dispatcher
             .dispatch(&mut gameworld.specs_world.res);
 
-        for e in self.collide_world.contact_events() {
+        let collide_world = gameworld.specs_world.read_resource::<CollisionWorld>();
+        for e in collide_world.contact_events() {
             println!("{:?}", e);
         }
 
@@ -117,15 +124,25 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     }
 
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
-        let pos = gameworld.specs_world.read::<Position>();
-        let sprite = gameworld.specs_world.read::<Sprite>();
-        let mesh = gameworld.specs_world.read::<Mesh>();
+        let pos = gameworld.specs_world.read_storage::<Position>();
+        let sprite = gameworld.specs_world.read_storage::<Sprite>();
+        let mesh = gameworld.specs_world.read_storage::<Mesh>();
         for (p, _) in (&pos, &sprite).join() {
-            graphics::draw(ctx, &(self.kiwi.borrow().0), graphics::Point2::new(p.0.x, p.0.y), 0.0)?;
+            graphics::draw_ex(ctx, &(self.kiwi.borrow().0),
+                graphics::DrawParam {
+                    dest: graphics::Point2::new(p.position.x, p.position.y),
+                    rotation: p.orientation,
+                    .. graphics::DrawParam::default()
+                })?;
         }
 
         for (p, mesh) in (&pos, &mesh).join() {
-            graphics::draw(ctx, &mesh.mesh, graphics::Point2::new(p.0.x, p.0.y), 0.0)?;
+            graphics::draw_ex(ctx, &mesh.mesh,
+                graphics::DrawParam {
+                    dest: graphics::Point2::new(p.position.x, p.position.y),
+                    rotation: p.orientation,
+                    .. graphics::DrawParam::default()
+                })?;
         }
         Ok(())
     }

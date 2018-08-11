@@ -5,6 +5,7 @@
 
 use ggez;
 use ggez_goodies::input as ginput;
+use ncollide2d as nc;
 use specs;
 
 use warmy;
@@ -13,6 +14,7 @@ use std::path;
 
 use input;
 use components::*;
+use util::*;
 
 pub struct World {
     pub assets: warmy::Store<ggez::Context>,
@@ -48,7 +50,9 @@ impl World {
         let store = warmy::Store::new(opt)
             .expect("Could not create asset store?  Does the directory exist?");
 
-        let w = specs::World::new();
+        let mut w = specs::World::new();
+        let collide_world: CollisionWorld = nc::world::CollisionWorld::new(0.02);
+        w.add_resource(collide_world);
 
         let mut the_world = Self {
             assets: store,
@@ -58,6 +62,7 @@ impl World {
         };
 
         the_world.register_components();
+
         the_world
     }
 }

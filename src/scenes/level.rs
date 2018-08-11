@@ -32,7 +32,7 @@ impl LevelScene {
 
         let dispatcher = Self::register_systems();
 
-        Self::create_player(world);
+        Self::create_player(world)?;
         Self::create_planet(ctx, world)?;
 
         Ok(LevelScene {
@@ -55,7 +55,21 @@ impl LevelScene {
             .build()
     }
 
-    fn create_player(world: &mut World) {
+    fn create_player(world: &mut World) -> Result<(), Err> {
+
+        // Make the player entity
+        let entity = world
+            .specs_world
+            .create_entity()
+            .with(Motion {
+                velocity: Vector2::new(1.5, 0.0),
+                acceleration: Vector2::new(0.0, 0.0),
+            })
+            .with(Mass {})
+            .with(Sprite {})
+            // .with(player_collider)
+            .build();
+
         // Player collision info
         let ball = nc::shape::Ball::new(10.0);
         let mut player_collide_group = nc::world::CollisionGroups::new();
@@ -69,29 +83,36 @@ impl LevelScene {
                 nc::shape::ShapeHandle::new(ball.clone()),
                 player_collide_group,
                 query_type,
-                (),
+                entity,
             );
 
             Collider {
                 object_handle: player_handle,
             }
         };
-
-        // Make the player entity
-        world
-            .specs_world
-            .create_entity()
-            .with(Motion {
-                velocity: Vector2::new(1.5, 0.0),
-                acceleration: Vector2::new(0.0, 0.0),
-            })
-            .with(Mass {})
-            .with(Sprite {})
-            .with(player_collider)
-            .build();
+        // Insert the collider.
+        world.specs_world.write_storage::<Collider>().insert(entity, player_collider)?;
+        Ok(())
     }
 
     fn create_planet(ctx: &mut ggez::Context, world: &mut World) -> Result<(), Err> {
+        // Make the world entity
+        let entity = world
+            .specs_world
+            .create_entity()
+            .with(Mesh {
+                mesh: graphics::MeshBuilder::default()
+                    .circle(
+                        graphics::DrawMode::Fill,
+                        graphics::Point2::new(0.0, 0.0),
+                        10.0,
+                        1.0,
+                    )
+                    .build(ctx)?,
+            })
+            // .with(planet_collider)
+            .build();
+
         // Planet collision info
         let ball = nc::shape::Ball::new(10.0);
         let mut terrain_collide_group = nc::world::CollisionGroups::new();
@@ -105,31 +126,48 @@ impl LevelScene {
                 nc::shape::ShapeHandle::new(ball.clone()),
                 terrain_collide_group,
                 query_type,
-                (),
+                entity,
             );
 
             Collider {
                 object_handle: planet_handle,
             }
         };
-
-        // Make the world entity
-        world
-            .specs_world
-            .create_entity()
-            .with(Mesh {
-                mesh: graphics::MeshBuilder::default()
-                    .circle(
-                        graphics::DrawMode::Fill,
-                        graphics::Point2::new(0.0, 0.0),
-                        10.0,
-                        1.0,
-                    )
-                    .build(ctx)?,
-            })
-            .with(planet_collider)
-            .build();
+        // Insert the collider.
+        world.specs_world.write_storage::<Collider>().insert(entity, planet_collider)?;
         Ok(())
+    }
+
+    fn handle_contact_events(&mut self, gameworld: &mut World) {
+        let mut collide_world = gameworld.specs_world.write_resource::<CollisionWorld>();
+        collide_world.update();
+
+        // Save and reuse the same vec each run of the loop so we only allocate once.
+        let contacts_list = &mut Vec::new();
+        for e in collide_world.contact_events() {
+            contacts_list.clear();
+            match e {
+                nc::events::ContactEvent::Started(cobj_handle1, cobj_handle2) => {
+                    self.collided = true;
+                    let pair = (&*collide_world).contact_pair(*cobj_handle1, *cobj_handle2)
+                        .expect("Collision event has no contacts; should never happen?");
+                    pair.contacts(contacts_list);
+                    let cobj1 = collide_world.collision_object(*cobj_handle1)
+                        .expect("Invalid collision object handle?");
+                    let cobj2 = collide_world.collision_object(*cobj_handle2)
+                        .expect("Invalid collision object handle?");
+                    let e1 = cobj1.data();
+                    let e2 = cobj2.data();
+                    for c in contacts_list.iter() {
+                        error!("Contact with entities {:?} and {:?}", e1, e2);
+                    }
+
+                }
+                nc::events::ContactEvent::Stopped(_, _) => {
+                    self.collided = false;
+                }
+            }
+        }
     }
 }
 
@@ -155,19 +193,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn update(&mut self, gameworld: &mut World) -> FSceneSwitch {
         self.dispatcher.dispatch(&mut gameworld.specs_world.res);
 
-        let mut collide_world = gameworld.specs_world.write_resource::<CollisionWorld>();
-        collide_world.update();
-        for e in collide_world.contact_events() {
-            match e {
-                nc::events::ContactEvent::Started(_, _) => {
-                    self.collided = true;
-                }
-                nc::events::ContactEvent::Stopped(_, _) => {
-                    self.collided = false;
-                }
-            }
-        }
-
+        self.handle_contact_events(gameworld);
         if self.done {
             scene::SceneSwitch::Pop
         } else {

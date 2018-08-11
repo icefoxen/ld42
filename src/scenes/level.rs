@@ -30,47 +30,35 @@ impl LevelScene {
             .get::<_, resources::Image>(&warmy::FSKey::new("/images/kiwi.png"), ctx)
             .unwrap();
 
-        let ball = nc::shape::Ball::new(10.0);
         let dispatcher = Self::register_systems();
 
-        // Planet collision info
-        let mut terrain_collide_group = nc::world::CollisionGroups::new();
-        terrain_collide_group.set_membership(&[1]);
-        let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
+        Self::create_player(world);
+        Self::create_planet(ctx, world)?;
 
-        let planet_collider = {
-            let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
-            let planet_handle = collide_world.add(
-                na::Isometry2::new(Vector2::new(100.0, 100.0), na::zero()),
-                nc::shape::ShapeHandle::new(ball.clone()),
-                terrain_collide_group,
-                query_type,
-                (),
-            );
+        Ok(LevelScene {
+            done,
+            kiwi,
+            dispatcher,
+            collided: false,
+        })
+    }
 
-            Collider {
-                object_handle: planet_handle,
-            }
+    fn register_systems() -> specs::Dispatcher<'static, 'static> {
+        let gravity = GravitySystem {
+            position: Point2::new(100.0, 100.0),
+            force: 1.0,
         };
+        specs::DispatcherBuilder::new()
+            // .with(MovementSystem, "sys_movement", &[])
+            .with(NCollideMotionSystem {}, "sys_movement", &[])
+            .with(gravity, "sys_gravity", &["sys_movement"])
+            // .with(DebugPrinterSystem {}, "sys_debugprint", &[])
+            .build()
+    }
 
-        // Make the world object thingy
-        world
-            .specs_world
-            .create_entity()
-            .with(Mesh {
-                mesh: graphics::MeshBuilder::default()
-                    .circle(
-                        graphics::DrawMode::Fill,
-                        graphics::Point2::new(0.0, 0.0),
-                        10.0,
-                        1.0,
-                    )
-                    .build(ctx)?,
-            })
-            .with(planet_collider)
-            .build();
-
+    fn create_player(world: &mut World) {
         // Player collision info
+        let ball = nc::shape::Ball::new(10.0);
         let mut player_collide_group = nc::world::CollisionGroups::new();
         player_collide_group.set_membership(&[2]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
@@ -106,26 +94,47 @@ impl LevelScene {
             .with(Sprite {})
             .with(player_collider)
             .build();
-
-        Ok(LevelScene {
-            done,
-            kiwi,
-            dispatcher,
-            collided: false,
-        })
     }
 
-    fn register_systems() -> specs::Dispatcher<'static, 'static> {
-        let gravity = GravitySystem {
-            position: Point2::new(100.0, 100.0),
-            force: 1.0,
+    fn create_planet(ctx: &mut ggez::Context, world: &mut World)  -> Result<(), Err> {
+        // Planet collision info
+        let ball = nc::shape::Ball::new(10.0);
+        let mut terrain_collide_group = nc::world::CollisionGroups::new();
+        terrain_collide_group.set_membership(&[1]);
+        let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
+
+        let planet_collider = {
+            let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
+            let planet_handle = collide_world.add(
+                na::Isometry2::new(Vector2::new(100.0, 100.0), na::zero()),
+                nc::shape::ShapeHandle::new(ball.clone()),
+                terrain_collide_group,
+                query_type,
+                (),
+            );
+
+            Collider {
+                object_handle: planet_handle,
+            }
         };
-        specs::DispatcherBuilder::new()
-            // .with(MovementSystem, "sys_movement", &[])
-            .with(NCollideMotionSystem {}, "sys_movement", &[])
-            .with(gravity, "sys_gravity", &["sys_movement"])
-            // .with(DebugPrinterSystem {}, "sys_debugprint", &[])
-            .build()
+
+        // Make the world object thingy
+        world
+            .specs_world
+            .create_entity()
+            .with(Mesh {
+                mesh: graphics::MeshBuilder::default()
+                    .circle(
+                        graphics::DrawMode::Fill,
+                        graphics::Point2::new(0.0, 0.0),
+                        10.0,
+                        1.0,
+                    )
+                    .build(ctx)?,
+            })
+            .with(planet_collider)
+            .build();
+        Ok(())
     }
 }
 

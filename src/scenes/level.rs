@@ -91,7 +91,7 @@ impl LevelScene {
             .build();
     }
 
-    fn create_planet(ctx: &mut ggez::Context, world: &mut World)  -> Result<(), Err> {
+    fn create_planet(ctx: &mut ggez::Context, world: &mut World) -> Result<(), Err> {
         // Planet collision info
         let ball = nc::shape::Ball::new(10.0);
         let mut terrain_collide_group = nc::world::CollisionGroups::new();
@@ -137,7 +137,10 @@ impl LevelScene {
 /// of the object.
 ///
 /// Mainly used for drawing, so it returns ggez's Point type rather than ncollide's.
-fn collision_object_position(ncollide_world: &CollisionWorld, collider: &Collider) -> (graphics::Point2, f32) {
+fn collision_object_position(
+    ncollide_world: &CollisionWorld,
+    collider: &Collider,
+) -> (graphics::Point2, f32) {
     let collision_object = ncollide_world
         .collision_object(collider.object_handle)
         .expect("Invalid collision object; was it removed from ncollide but not specs?");
@@ -158,7 +161,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
             match e {
                 nc::events::ContactEvent::Started(_, _) => {
                     self.collided = true;
-                },
+                }
                 nc::events::ContactEvent::Stopped(_, _) => {
                     self.collided = false;
                 }

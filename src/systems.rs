@@ -94,9 +94,7 @@ impl<'a> specs::System<'a> for DebugPrinterSystem {
         for (motion, collider) in (&motion, &collider).join() {
             let collision_obj = ncollide_world
                 .collision_object(collider.object_handle)
-                .expect(
-                    "Invalid collision object; was it removed from ncollide but not specs?",
-                );
+                .expect("Invalid collision object; was it removed from ncollide but not specs?");
             let new_position = collision_obj.position().clone();
             debug!(
                 "Object position {:?}, velocity <{},{}>",

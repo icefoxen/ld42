@@ -37,7 +37,7 @@ pub struct Player;
 #[derive(Clone, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Collider {
-    pub object: nc::world::CollisionObjectHandle,
+    pub object_handle: nc::world::CollisionObjectHandle,
 }
 
 /// Sprite marker.

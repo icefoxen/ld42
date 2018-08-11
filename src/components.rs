@@ -20,8 +20,13 @@ pub struct Mass {}
 
 /// Just a marker that a particular entity is the player.
 #[derive(Clone, Debug, Component)]
-#[storage(VecStorage)]
-pub struct Player {}
+#[storage(HashMapStorage)]
+pub struct Player {
+    pub on_ground: bool,
+    pub jumping: bool,
+    pub walk_direction: f32,
+    pub walk_force: f32,
+}
 
 /// NCollide collision object handle.
 /// This also stores position and orientation info.

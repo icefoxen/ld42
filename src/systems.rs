@@ -59,10 +59,8 @@ impl<'a> specs::System<'a> for NCollideMotionSystem {
     );
 
     fn run(&mut self, (mut collider, mut motion, mut ncollide_world): Self::SystemData) {
-        // let mut ncollide_world =
         for (collider, motion) in (&mut collider, &mut motion).join() {
             motion.velocity += motion.acceleration;
-            // pos.position += motion.velocity;
             motion.acceleration = na::zero();
 
             let new_position = {
@@ -79,6 +77,49 @@ impl<'a> specs::System<'a> for NCollideMotionSystem {
         }
     }
 }
+
+/*
+#[allow(dead_code)]
+pub struct PlayerMotionSystem {}
+
+impl<'a> specs::System<'a> for PlayerMotionSystem {
+    type SystemData = (
+        specs::ReadStorage<'a, Player>,
+        specs::WriteStorage<'a, Collider>,
+        specs::WriteStorage<'a, Motion>,
+        // Gotta use the panic handler here 'cause there is no default
+        // we can provide for CollisionWorld, I guess.
+        specs::Write<'a, CollisionWorld, specs::shred::PanicHandler>,
+    );
+
+    fn run(&mut self, (player, mut colliders, mut motions, mut ncollide_world): Self::SystemData) {
+        for (player, collider, motion) in (&player, &mut colliders, &mut motions).join() {
+            let planet_collider = colliders.get(player.planet_entity);
+            if player.on_ground {
+                motion.velocity = na::zero();
+                motion.acceleration = na::zero();
+                if player.jumping {
+                    motion.velocity = Vector2::new(1.0, 0.0);
+                }
+            }
+            motion.velocity += motion.acceleration;
+            motion.acceleration = na::zero();
+
+            let new_position = {
+                let collision_obj = ncollide_world
+                    .collision_object(collider.object_handle)
+                    .expect(
+                        "Invalid collision object; was it removed from ncollide but not specs?",
+                    );
+                let mut new_position = collision_obj.position().clone();
+                new_position.append_translation_mut(&na::Translation::from_vector(motion.velocity));
+                new_position
+            };
+            ncollide_world.set_position(collider.object_handle, new_position);
+        }
+    }
+}
+*/
 
 #[allow(dead_code)]
 pub struct DebugPrinterSystem {}

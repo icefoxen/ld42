@@ -21,7 +21,7 @@ pub struct Mass {}
 /// Just a marker that a particular entity is the player.
 #[derive(Clone, Debug, Component)]
 #[storage(VecStorage)]
-pub struct Player;
+pub struct Player {}
 
 /// NCollide collision object handle.
 /// This also stores position and orientation info.

@@ -56,18 +56,17 @@ impl LevelScene {
     }
 
     fn create_player(world: &mut World) -> Result<(), Err> {
-
         // Make the player entity
         let entity = world
             .specs_world
             .create_entity()
+            .with(Player {})
             .with(Motion {
                 velocity: Vector2::new(1.5, 0.0),
                 acceleration: Vector2::new(0.0, 0.0),
             })
             .with(Mass {})
             .with(Sprite {})
-            // .with(player_collider)
             .build();
 
         // Player collision info
@@ -110,7 +109,6 @@ impl LevelScene {
                     )
                     .build(ctx)?,
             })
-            // .with(planet_collider)
             .build();
 
         // Planet collision info
@@ -141,6 +139,7 @@ impl LevelScene {
     fn handle_contact_events(&mut self, gameworld: &mut World) {
         let mut collide_world = gameworld.specs_world.write_resource::<CollisionWorld>();
         collide_world.update();
+        let mut motion_storage = gameworld.specs_world.write_storage::<Motion>();
 
         // Save and reuse the same vec each run of the loop so we only allocate once.
         let contacts_list = &mut Vec::new();
@@ -156,10 +155,24 @@ impl LevelScene {
                         .expect("Invalid collision object handle?");
                     let cobj2 = collide_world.collision_object(*cobj_handle2)
                         .expect("Invalid collision object handle?");
+
+                    // Get the entities out of the collision data
                     let e1 = cobj1.data();
                     let e2 = cobj2.data();
-                    for c in contacts_list.iter() {
-                        error!("Contact with entities {:?} and {:?}", e1, e2);
+                    // Now, do any of these things have a motion?
+                    // If not, collision does nothing to them.
+                    if let Some(motion) = motion_storage.get_mut(*e1) {
+                        // TODO: For now just take the first contact
+                        let normal = contacts_list[0].deepest_contact().unwrap().contact.normal;
+                        let dv = -2.0 * na::dot(&motion.velocity, &normal) * *normal;
+                        motion.velocity += dv;
+                    }
+
+                    if let Some(motion) = motion_storage.get_mut(*e2) {
+                        // TODO: For now just take the first contact
+                        let normal = contacts_list[0].deepest_contact().unwrap().contact.normal;
+                        let dv = -2.0 * na::dot(&motion.velocity, &normal) * *normal;
+                        motion.velocity += dv;
                     }
 
                 }

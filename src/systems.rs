@@ -5,6 +5,7 @@ use util::*;
 
 use components::*;
 
+/*
 pub struct MovementSystem;
 
 impl<'a> specs::System<'a> for MovementSystem {
@@ -21,7 +22,7 @@ impl<'a> specs::System<'a> for MovementSystem {
         }
     }
 }
-
+*/
 
 pub struct GravitySystem {
     pub position: Point2,
@@ -88,7 +89,7 @@ impl<'a> specs::System<'a> for NCollideMotionSystem {
     }
 }
 
-
+#[allow(dead_code)]
 pub struct DebugPrinterSystem {
 
 }

@@ -1,8 +1,6 @@
 use ggez;
 use ncollide2d as nc;
 use specs::*;
-use warmy;
-use resources;
 use util::*;
 
 /// ///////////////////////////////////////////////////////////////////////

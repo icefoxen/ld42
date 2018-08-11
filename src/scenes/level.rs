@@ -146,7 +146,6 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     }
 
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
-        let pos = gameworld.specs_world.read_storage::<Position>();
         let sprite = gameworld.specs_world.read_storage::<Sprite>();
         let mesh = gameworld.specs_world.read_storage::<Mesh>();
         let collider = gameworld.specs_world.read_storage::<Collider>();

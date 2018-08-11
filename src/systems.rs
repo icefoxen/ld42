@@ -6,20 +6,35 @@ use util::*;
 use components::*;
 
 pub struct GravitySystem {
-    pub position: Point2,
-    pub force: f32,
 }
 
-/// TODO: Make this use a proper fucking position component instead of having its own.
 impl<'a> specs::System<'a> for GravitySystem {
     type SystemData = (
         specs::WriteStorage<'a, Motion>,
+        specs::ReadStorage<'a, Gravity>,
         specs::ReadStorage<'a, Collider>,
         specs::ReadStorage<'a, Mass>,
         specs::Read<'a, CollisionWorld, specs::shred::PanicHandler>,
     );
 
-    fn run(&mut self, (mut motion, collider, mass, ncollide_world): Self::SystemData) {
+    fn run(&mut self, (mut motion, gravity, collider, mass, ncollide_world): Self::SystemData) {
+        // I know we'll only ever have one gravity source in the game,
+        // shut up.
+        let mut gravity_sources: Vec<(Point2, f32)> = Vec::new();
+        for (collider, gravity) in (&collider, &gravity).join() {
+            let grav_position = {
+                let collision_obj = ncollide_world
+                    .collision_object(collider.object_handle)
+                    .expect(
+                        "Invalid collision object; was it removed from ncollide but not specs?",
+                    );
+                Point2 {
+                    coords: collision_obj.position().translation.vector,
+                }
+            };
+            gravity_sources.push((grav_position, gravity.force));
+        }
+
         for (motion, collider, _mass) in (&mut motion, &collider, &mass).join() {
             let other_position = {
                 let collision_obj = ncollide_world
@@ -27,21 +42,23 @@ impl<'a> specs::System<'a> for GravitySystem {
                     .expect(
                         "Invalid collision object; was it removed from ncollide but not specs?",
                     );
-                na::Point2 {
+                Point2 {
                     coords: collision_obj.position().translation.vector,
                 }
             };
 
-            let offset = self.position - other_position;
-            let distance = na::norm(&offset);
-            // avoid punishingly small distances
-            if !distance.is_nan() && distance > 0.1 {
-                motion.acceleration += offset * (self.force / (distance * distance));
-            } else {
-                debug!(
-                    "Something horrible happened in GravitySystem: distance {}",
-                    distance
-                );
+            for (grav_position, grav_force) in &gravity_sources {
+                let offset = grav_position - other_position;
+                let distance = na::norm(&offset);
+                // avoid punishingly small distances
+                if !distance.is_nan() && distance > 0.1 {
+                    motion.acceleration += offset * (grav_force / (distance * distance));
+                } else {
+                    debug!(
+                        "Something horrible happened in GravitySystem: distance {}",
+                        distance
+                    );
+                }
             }
         }
     }

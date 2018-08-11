@@ -49,8 +49,6 @@ impl LevelScene {
 
     fn register_systems() -> specs::Dispatcher<'static, 'static> {
         let gravity = GravitySystem {
-            position: Point2::new(100.0, 100.0),
-            force: 5.0,
         };
         specs::DispatcherBuilder::new()
             .with(gravity, "sys_gravity", &[])
@@ -127,6 +125,10 @@ impl LevelScene {
                     )
                     .build(ctx)?,
             })
+            .with(Gravity {
+                    force: 15.0,
+                }
+            )
             .build();
 
         // Planet collision info

@@ -50,3 +50,10 @@ pub struct Sprite {
 pub struct Mesh {
     pub mesh: ggez::graphics::Mesh,
 }
+
+/// Gravity force; needs to go along with a Collider component.
+#[derive(Clone, Debug, Component)]
+#[storage(HashMapStorage)]
+pub struct Gravity {
+    pub force: f32,
+}

@@ -21,7 +21,8 @@ use error::*;
 ///
 /// TODO: With warmy 0.7 this should not be necessary, figure it out.
 fn warmy_to_ggez_path(path: &path::Path, root: &path::Path) -> path::PathBuf {
-    let stripped_path = path.strip_prefix(root)
+    let stripped_path = path
+        .strip_prefix(root)
         .expect("warmy path is outside of the warmy store?  Should never happen.");
     path::Path::new("/").join(stripped_path)
 }

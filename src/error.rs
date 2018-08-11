@@ -5,9 +5,7 @@ use ggez;
 #[derive(Debug, Fail)]
 pub enum Err {
     #[fail(display = "ggez error: {:?}", err)]
-    GgezError {
-        err: ggez::GameError,
-    },
+    GgezError { err: ggez::GameError },
 }
 
 impl From<ggez::GameError> for Err {

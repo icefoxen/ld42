@@ -23,8 +23,7 @@ pub struct Motion {
 /// Objects without one won't get affected by the `Gravity` system.
 #[derive(Clone, Debug, Component)]
 #[storage(VecStorage)]
-pub struct Mass {
-}
+pub struct Mass {}
 
 /// Just a marker that a particular entity is the player.
 #[derive(Clone, Debug, Component)]

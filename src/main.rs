@@ -16,9 +16,9 @@ extern crate specs;
 extern crate specs_derive;
 extern crate warmy;
 
-use ggez::*;
 use ggez::conf;
 use ggez::event;
+use ggez::*;
 
 use ggez::event::*;
 use ggez::graphics;
@@ -109,7 +109,7 @@ impl EventHandler for MainState {
             self.scenes.update();
         }
         self.scenes.world.assets.sync(ctx);
-        self.scenes.world.input.update(1.0/60.0);
+        self.scenes.world.input.update(1.0 / 60.0);
 
         if self.scenes.world.quit {
             warn!("Exiting due to world quit flag.");

@@ -12,8 +12,8 @@ use warmy;
 
 use std::path;
 
-use input;
 use components::*;
+use input;
 use util::*;
 
 pub struct World {

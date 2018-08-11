@@ -1,6 +1,6 @@
 //! specs systems.
-use specs::{self, Join};
 use nalgebra as na;
+use specs::{self, Join};
 use util::*;
 
 use components::*;
@@ -40,9 +40,14 @@ impl<'a> specs::System<'a> for GravitySystem {
     fn run(&mut self, (mut motion, collider, mass, ncollide_world): Self::SystemData) {
         for (motion, collider, _mass) in (&mut motion, &collider, &mass).join() {
             let other_position = {
-                let collision_obj = ncollide_world.collision_object(collider.object_handle)
-                .expect("Invalid collision object; was it removed from ncollide but not specs?");
-                na::Point2{ coords: collision_obj.position().translation.vector }
+                let collision_obj = ncollide_world
+                    .collision_object(collider.object_handle)
+                    .expect(
+                        "Invalid collision object; was it removed from ncollide but not specs?",
+                    );
+                na::Point2 {
+                    coords: collision_obj.position().translation.vector,
+                }
             };
 
             let offset = self.position - other_position;
@@ -51,15 +56,16 @@ impl<'a> specs::System<'a> for GravitySystem {
             if !distance.is_nan() && distance > 0.1 {
                 motion.acceleration += offset * (self.force / (distance * distance));
             } else {
-                debug!("Something horrible happened in GravitySystem: distance {}", distance);
+                debug!(
+                    "Something horrible happened in GravitySystem: distance {}",
+                    distance
+                );
             }
         }
     }
 }
 
-
-pub struct NCollideMotionSystem {
-}
+pub struct NCollideMotionSystem {}
 
 impl<'a> specs::System<'a> for NCollideMotionSystem {
     type SystemData = (
@@ -78,8 +84,11 @@ impl<'a> specs::System<'a> for NCollideMotionSystem {
             motion.acceleration = na::zero();
 
             let new_position = {
-                let collision_obj = ncollide_world.collision_object(collider.object_handle)
-                .expect("Invalid collision object; was it removed from ncollide but not specs?");
+                let collision_obj = ncollide_world
+                    .collision_object(collider.object_handle)
+                    .expect(
+                        "Invalid collision object; was it removed from ncollide but not specs?",
+                    );
                 let mut new_position = collision_obj.position().clone();
                 new_position.append_translation_mut(&na::Translation::from_vector(motion.velocity));
                 new_position
@@ -90,11 +99,7 @@ impl<'a> specs::System<'a> for NCollideMotionSystem {
 }
 
 #[allow(dead_code)]
-pub struct DebugPrinterSystem {
-
-}
-
-
+pub struct DebugPrinterSystem {}
 
 impl<'a> specs::System<'a> for DebugPrinterSystem {
     type SystemData = (
@@ -104,7 +109,8 @@ impl<'a> specs::System<'a> for DebugPrinterSystem {
 
     fn run(&mut self, (mut motion, position): Self::SystemData) {
         for (motion, position) in (&mut motion, &position).join() {
-            debug!("Object position <{},{}>, velocity <{},{}>",
+            debug!(
+                "Object position <{},{}>, velocity <{},{}>",
                 position.position.x, position.position.y, motion.velocity.x, motion.velocity.y
             );
         }

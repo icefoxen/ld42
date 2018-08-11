@@ -1,19 +1,19 @@
 use ggez;
 use ggez::graphics;
 use ggez_goodies::scene;
-use ncollide2d as nc;
 use nalgebra as na;
-use specs::{self, Join, Builder};
+use ncollide2d as nc;
+use specs::{self, Builder, Join};
 use warmy;
 
-use input;
 use components::*;
 use error::Err;
+use input;
+use resources;
 use scenes::*;
 use systems::*;
-use resources;
-use world::World;
 use util::*;
+use world::World;
 
 pub struct LevelScene {
     done: bool,
@@ -28,7 +28,6 @@ impl LevelScene {
             .assets
             .get::<_, resources::Image>(&warmy::FSKey::new("/images/kiwi.png"), ctx)
             .unwrap();
-
 
         let ball = nc::shape::Ball::new(10.0);
         let dispatcher = Self::register_systems();
@@ -45,7 +44,7 @@ impl LevelScene {
                 nc::shape::ShapeHandle::new(ball.clone()),
                 terrain_collide_group,
                 query_type,
-                ()
+                (),
             );
 
             Collider {
@@ -54,13 +53,18 @@ impl LevelScene {
         };
 
         // Make the world object thingy
-        world.specs_world
+        world
+            .specs_world
             .create_entity()
             .with(Mesh {
                 mesh: graphics::MeshBuilder::default()
-                    .circle(graphics::DrawMode::Fill,
-                        graphics::Point2::new(0.0, 0.0), 10.0, 1.0)
-                    .build(ctx)?
+                    .circle(
+                        graphics::DrawMode::Fill,
+                        graphics::Point2::new(0.0, 0.0),
+                        10.0,
+                        1.0,
+                    )
+                    .build(ctx)?,
             })
             .with(planet_collider)
             .build();
@@ -77,14 +81,13 @@ impl LevelScene {
                 nc::shape::ShapeHandle::new(ball.clone()),
                 player_collide_group,
                 query_type,
-                ()
+                (),
             );
 
             Collider {
                 object_handle: player_handle,
             }
         };
-
 
         // Make the player.
         world
@@ -103,16 +106,12 @@ impl LevelScene {
             .with(player_collider)
             .build();
 
-
-
         Ok(LevelScene {
             done,
             kiwi,
             dispatcher,
         })
     }
-
-
 
     fn register_systems() -> specs::Dispatcher<'static, 'static> {
         let gravity = GravitySystem {
@@ -130,8 +129,7 @@ impl LevelScene {
 
 impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn update(&mut self, gameworld: &mut World) -> FSceneSwitch {
-        self.dispatcher
-            .dispatch(&mut gameworld.specs_world.res);
+        self.dispatcher.dispatch(&mut gameworld.specs_world.res);
 
         let collide_world = gameworld.specs_world.read_resource::<CollisionWorld>();
         for e in collide_world.contact_events() {
@@ -151,31 +149,41 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         let collider = gameworld.specs_world.read_storage::<Collider>();
         let ncollide_world = gameworld.specs_world.read_resource::<CollisionWorld>();
         for (c, _) in (&collider, &sprite).join() {
-            let collision_object = ncollide_world.collision_object(c.object_handle)
+            let collision_object = ncollide_world
+                .collision_object(c.object_handle)
                 .expect("Invalid collision object; was it removed from ncollide but not specs?");
             let isometry = collision_object.position();
-            let annoying_new_pos = graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
+            let annoying_new_pos =
+                graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
             let annoying_new_angle = isometry.rotation.angle();
-            graphics::draw_ex(ctx, &(self.kiwi.borrow().0),
+            graphics::draw_ex(
+                ctx,
+                &(self.kiwi.borrow().0),
                 graphics::DrawParam {
                     dest: annoying_new_pos,
                     rotation: annoying_new_angle,
-                    .. graphics::DrawParam::default()
-                })?;
+                    ..graphics::DrawParam::default()
+                },
+            )?;
         }
 
         for (c, mesh) in (&collider, &mesh).join() {
-            let collision_object = ncollide_world.collision_object(c.object_handle)
+            let collision_object = ncollide_world
+                .collision_object(c.object_handle)
                 .expect("Invalid collision object; was it removed from ncollide but not specs?");
             let isometry = collision_object.position();
-            let annoying_new_pos = graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
+            let annoying_new_pos =
+                graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
             let annoying_new_angle = isometry.rotation.angle();
-            graphics::draw_ex(ctx, &mesh.mesh,
+            graphics::draw_ex(
+                ctx,
+                &mesh.mesh,
                 graphics::DrawParam {
                     dest: annoying_new_pos,
                     rotation: annoying_new_angle,
-                    .. graphics::DrawParam::default()
-                })?;
+                    ..graphics::DrawParam::default()
+                },
+            )?;
         }
         Ok(())
     }

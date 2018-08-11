@@ -8,4 +8,4 @@ use nalgebra as na;
 use ncollide2d as nc;
 pub type Point2 = na::Point2<f32>;
 pub type Vector2 = na::Vector2<f32>;
-pub type CollisionWorld = nc::world::CollisionWorld<f32,()>;
+pub type CollisionWorld = nc::world::CollisionWorld<f32, ()>;

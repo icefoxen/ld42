@@ -19,7 +19,6 @@ pub struct LevelScene {
     done: bool,
     sprite: warmy::Res<resources::Image>,
     dispatcher: specs::Dispatcher<'static, 'static>,
-    collided: bool,
     player_entity: specs::Entity,
     planet_entity: specs::Entity,
     camera_focus: Point2,
@@ -41,6 +40,7 @@ impl LevelScene {
         let planet_radius = 2000.0;
         let planet_entity = Self::create_planet(ctx, world, planet_radius)?;
         let player_entity = Self::create_player(ctx, world, planet_radius)?;
+        let _ = Self::create_obstacle(ctx, world, planet_radius, 1.0)?;
 
         Ok(LevelScene {
             done,
@@ -48,7 +48,6 @@ impl LevelScene {
             dispatcher,
             player_entity,
             planet_entity,
-            collided: false,
             camera_focus: na::origin(),
         })
     }
@@ -170,6 +169,68 @@ impl LevelScene {
         Ok(entity)
     }
 
+
+    /// Creates an obstacle on the planet at the given angle.
+    /// Assumes the planet is at 0,0 I guess
+    fn create_obstacle(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32, angle: f32) -> Result<specs::Entity, Err> {
+        let obstacle_halfwidth = 10.0;
+        let obstacle_offset = planet_radius + obstacle_halfwidth;
+        // Make the player entity
+        let entity = world
+            .specs_world
+            .create_entity()
+            .with(Obstacle {})
+            .with(Mesh {
+                mesh: graphics::MeshBuilder::default()
+                    .polygon(
+                        graphics::DrawMode::Line(2.0),
+                        &[
+                            graphics::Point2::new(-obstacle_halfwidth, -obstacle_halfwidth),
+                            graphics::Point2::new(-obstacle_halfwidth, obstacle_halfwidth),
+                            graphics::Point2::new(obstacle_halfwidth, obstacle_halfwidth),
+                            graphics::Point2::new(obstacle_halfwidth, -obstacle_halfwidth),
+                        ],
+                    )
+                    .build(ctx)?,
+            })
+            .build();
+
+        // collision info
+        let shape = nc::shape::Cuboid::new(Vector2::new(obstacle_halfwidth, obstacle_halfwidth));
+        // TODO: Wait do we create multiple groups here?  I think so...
+        // Also we gotta make sure we keep the things straight.
+        // TODO: Figure out membership; must collide with player but not
+        // the planet.
+        let mut obstacle_collide_group = nc::world::CollisionGroups::new();
+        obstacle_collide_group.set_membership(&[3]);
+        let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
+
+        let obstacle_collider = {
+            let mut collide_world = world.specs_world.write_resource::<CollisionWorld>();
+            // sigh
+            let x = f32::cos(angle) * obstacle_offset;
+            let y = f32::sin(angle) * obstacle_offset;
+            let handle = collide_world.add(
+                na::Isometry2::new(
+                    na::Vector2::new(x,y),
+                    angle,
+                ),
+                nc::shape::ShapeHandle::new(shape.clone()),
+                obstacle_collide_group,
+                query_type,
+                entity,
+            );
+
+            Collider {
+                object_handle: handle,
+            }
+        };
+        // Insert the collider.
+        world.specs_world.write_storage::<Collider>().insert(entity, obstacle_collider)?;
+        Ok(entity)
+
+    }
+
     fn handle_contact_events(&mut self, gameworld: &mut World) {
         let mut collide_world = gameworld.specs_world.write_resource::<CollisionWorld>();
         collide_world.update();
@@ -181,7 +242,6 @@ impl LevelScene {
             contacts_list.clear();
             match e {
                 nc::events::ContactEvent::Started(cobj_handle1, cobj_handle2) => {
-                    self.collided = true;
                     // It's apparently possible for the collision pair to have
                     // no contacts...
                     // Possibly if one object is entirely inside another?
@@ -203,8 +263,6 @@ impl LevelScene {
                     }
                 }
                 nc::events::ContactEvent::Stopped(cobj_handle1, cobj_handle2) => {
-                    self.collided = false;
-
                     if let Some(pair) = (&*collide_world).contact_pair(*cobj_handle1, *cobj_handle2) {
                         pair.contacts(contacts_list);
                         let cobj1 = collide_world.collision_object(*cobj_handle1)
@@ -225,6 +283,7 @@ impl LevelScene {
             }
         }
     }
+
 
 
     /// This is really hard to express as a specs System so we roll our own.
@@ -397,7 +456,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         "LevelScene"
     }
 
-    fn input(&mut self, gameworld: &mut World, ev: input::InputEvent, _started: bool) {
+    fn input(&mut self, gameworld: &mut World, _ev: input::InputEvent, _started: bool) {
         if gameworld.input.get_button_pressed(input::Button::Menu) {
             gameworld.quit = true;
         }

@@ -57,3 +57,10 @@ pub struct Mesh {
 pub struct Gravity {
     pub force: f32,
 }
+
+
+/// Something getting in your way
+#[derive(Clone, Debug, Component)]
+#[storage(HashMapStorage)]
+pub struct Obstacle {
+}

@@ -32,6 +32,7 @@ impl World {
         self.specs_world.register::<Sprite>();
         self.specs_world.register::<Mesh>();
         self.specs_world.register::<Gravity>();
+        self.specs_world.register::<Obstacle>();
 
     }
 

@@ -5,25 +5,6 @@ use util::*;
 
 use components::*;
 
-/*
-pub struct MovementSystem;
-
-impl<'a> specs::System<'a> for MovementSystem {
-    type SystemData = (
-        specs::WriteStorage<'a, Position>,
-        specs::WriteStorage<'a, Motion>,
-    );
-
-    fn run(&mut self, (mut pos, mut motion): Self::SystemData) {
-        for (pos, motion) in (&mut pos, &mut motion).join() {
-            motion.velocity += motion.acceleration;
-            pos.position += motion.velocity;
-            motion.acceleration = na::zero();
-        }
-    }
-}
-*/
-
 pub struct GravitySystem {
     pub position: Point2,
     pub force: f32,
@@ -104,15 +85,22 @@ pub struct DebugPrinterSystem {}
 
 impl<'a> specs::System<'a> for DebugPrinterSystem {
     type SystemData = (
-        specs::WriteStorage<'a, Motion>,
-        specs::ReadStorage<'a, Position>,
+        specs::ReadStorage<'a, Motion>,
+        specs::ReadStorage<'a, Collider>,
+        specs::Read<'a, CollisionWorld, specs::shred::PanicHandler>,
     );
 
-    fn run(&mut self, (mut motion, position): Self::SystemData) {
-        for (motion, position) in (&mut motion, &position).join() {
+    fn run(&mut self, (motion, collider, ncollide_world): Self::SystemData) {
+        for (motion, collider) in (&motion, &collider).join() {
+            let collision_obj = ncollide_world
+                .collision_object(collider.object_handle)
+                .expect(
+                    "Invalid collision object; was it removed from ncollide but not specs?",
+                );
+            let new_position = collision_obj.position().clone();
             debug!(
-                "Object position <{},{}>, velocity <{},{}>",
-                position.position.x, position.position.y, motion.velocity.x, motion.velocity.y
+                "Object position {:?}, velocity <{},{}>",
+                new_position, motion.velocity.x, motion.velocity.y
             );
         }
     }

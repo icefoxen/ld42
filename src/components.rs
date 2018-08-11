@@ -8,13 +8,6 @@ use util::*;
 /// ///////////////////////////////////////////////////////////////////////
 #[derive(Clone, Debug, Component)]
 #[storage(VecStorage)]
-pub struct Position {
-    pub position: Point2,
-    pub orientation: f32,
-}
-
-#[derive(Clone, Debug, Component)]
-#[storage(VecStorage)]
 pub struct Motion {
     pub velocity: Vector2,
     pub acceleration: Vector2,
@@ -30,7 +23,8 @@ pub struct Mass {}
 #[storage(VecStorage)]
 pub struct Player;
 
-/// NCollide collision object handle
+/// NCollide collision object handle.
+/// This also stores position and orientation info.
 #[derive(Clone, Debug, Component)]
 #[storage(VecStorage)]
 pub struct Collider {

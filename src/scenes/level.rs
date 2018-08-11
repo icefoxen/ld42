@@ -49,7 +49,6 @@ impl LevelScene {
             force: 1.0,
         };
         specs::DispatcherBuilder::new()
-            // .with(MovementSystem, "sys_movement", &[])
             .with(NCollideMotionSystem {}, "sys_movement", &[])
             .with(gravity, "sys_gravity", &["sys_movement"])
             // .with(DebugPrinterSystem {}, "sys_debugprint", &[])
@@ -78,14 +77,10 @@ impl LevelScene {
             }
         };
 
-        // Make the player.
+        // Make the player entity
         world
             .specs_world
             .create_entity()
-            .with(Position {
-                position: Point2::new(10.0, 10.0),
-                orientation: 0.0,
-            })
             .with(Motion {
                 velocity: Vector2::new(1.5, 0.0),
                 acceleration: Vector2::new(0.0, 0.0),
@@ -118,7 +113,7 @@ impl LevelScene {
             }
         };
 
-        // Make the world object thingy
+        // Make the world entity
         world
             .specs_world
             .create_entity()
@@ -136,6 +131,21 @@ impl LevelScene {
             .build();
         Ok(())
     }
+}
+
+/// Takes a collision object handle and returns the location and orientation
+/// of the object.
+///
+/// Mainly used for drawing, so it returns ggez's Point type rather than ncollide's.
+fn collision_object_position(ncollide_world: &CollisionWorld, collider: &Collider) -> (graphics::Point2, f32) {
+    let collision_object = ncollide_world
+        .collision_object(collider.object_handle)
+        .expect("Invalid collision object; was it removed from ncollide but not specs?");
+    let isometry = collision_object.position();
+    let annoying_new_pos =
+        graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
+    let annoying_new_angle = isometry.rotation.angle();
+    (annoying_new_pos, annoying_new_angle)
 }
 
 impl scene::Scene<World, input::InputEvent> for LevelScene {
@@ -168,38 +178,26 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         let collider = gameworld.specs_world.read_storage::<Collider>();
         let ncollide_world = gameworld.specs_world.read_resource::<CollisionWorld>();
         for (c, _) in (&collider, &sprite).join() {
-            let collision_object = ncollide_world
-                .collision_object(c.object_handle)
-                .expect("Invalid collision object; was it removed from ncollide but not specs?");
-            let isometry = collision_object.position();
-            let annoying_new_pos =
-                graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
-            let annoying_new_angle = isometry.rotation.angle();
+            let (pos, angle) = collision_object_position(&*ncollide_world, c);
             graphics::draw_ex(
                 ctx,
                 &(self.kiwi.borrow().0),
                 graphics::DrawParam {
-                    dest: annoying_new_pos,
-                    rotation: annoying_new_angle,
+                    dest: pos,
+                    rotation: angle,
                     ..graphics::DrawParam::default()
                 },
             )?;
         }
 
         for (c, mesh) in (&collider, &mesh).join() {
-            let collision_object = ncollide_world
-                .collision_object(c.object_handle)
-                .expect("Invalid collision object; was it removed from ncollide but not specs?");
-            let isometry = collision_object.position();
-            let annoying_new_pos =
-                graphics::Point2::new(isometry.translation.vector.x, isometry.translation.vector.y);
-            let annoying_new_angle = isometry.rotation.angle();
+            let (pos, angle) = collision_object_position(&*ncollide_world, c);
             graphics::draw_ex(
                 ctx,
                 &mesh.mesh,
                 graphics::DrawParam {
-                    dest: annoying_new_pos,
-                    rotation: annoying_new_angle,
+                    dest: pos,
+                    rotation: angle,
                     ..graphics::DrawParam::default()
                 },
             )?;

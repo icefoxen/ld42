@@ -25,13 +25,12 @@ pub struct World {
 
 impl World {
     fn register_components(&mut self) {
-        self.specs_world.register::<Position>();
+        self.specs_world.register::<Collider>();
         self.specs_world.register::<Motion>();
         self.specs_world.register::<Mass>();
         self.specs_world.register::<Player>();
         self.specs_world.register::<Sprite>();
         self.specs_world.register::<Mesh>();
-        self.specs_world.register::<Collider>();
     }
 
     pub fn new(ctx: &mut ggez::Context, resource_dir: Option<path::PathBuf>) -> Self {

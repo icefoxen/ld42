@@ -66,6 +66,7 @@ fn setup_logger() -> Result<(), fern::InitError> {
         // gfx_device_gl is very chatty on info loglevel, so
         // filter that a bit more strictly.
         .level_for("gfx_device_gl", log::LevelFilter::Warn)
+        .level_for("ggez", log::LevelFilter::Warn)
         .level(log::LevelFilter::Debug)
         .chain(std::io::stdout())
         .chain(std::fs::OpenOptions::new()
@@ -108,8 +109,10 @@ impl EventHandler for MainState {
             self.scenes.update();
         }
         self.scenes.world.assets.sync(ctx);
+        self.scenes.world.input.update(1.0/60.0);
 
         if self.scenes.world.quit {
+            warn!("Exiting due to world quit flag.");
             ctx.quit()?;
         }
 
@@ -131,12 +134,14 @@ impl EventHandler for MainState {
         _repeat: bool,
     ) {
         if let Some(ev) = self.input_binding.resolve(keycode) {
+            self.scenes.world.input.update_effect(ev, true);
             self.scenes.input(ev, true);
         }
     }
 
     fn key_up_event(&mut self, _ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
         if let Some(ev) = self.input_binding.resolve(keycode) {
+            self.scenes.world.input.update_effect(ev, false);
             self.scenes.input(ev, false);
         }
     }

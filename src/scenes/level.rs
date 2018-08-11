@@ -2,6 +2,7 @@ use ggez;
 use ggez::graphics;
 use ggez_goodies::scene;
 use ncollide2d as nc;
+use nalgebra as na;
 use specs::{self, Join};
 use warmy;
 
@@ -16,9 +17,9 @@ use util::*;
 
 pub struct LevelScene {
     done: bool,
-    ball: nc::shape::Ball<f32>,
     kiwi: warmy::Res<resources::Image>,
     dispatcher: specs::Dispatcher<'static, 'static>,
+    collide_world: nc::world::CollisionWorld<f32, ()>,
 }
 
 impl LevelScene {
@@ -43,7 +44,27 @@ impl LevelScene {
             .with(Sprite {})
             .build();
 
-        // Make the world thingy
+        let ball = nc::shape::Ball::new(10.0);
+
+        let dispatcher = Self::register_systems();
+        let mut terrain_collide_group = nc::world::CollisionGroups::new();
+        terrain_collide_group.set_membership(&[1]);
+        let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
+
+        let mut collide_world = nc::world::CollisionWorld::new(0.02);
+        let planet_handle = collide_world.add(
+            na::Isometry2::new(na::zero(), na::zero()),
+            nc::shape::ShapeHandle::new(ball.clone()),
+            terrain_collide_group,
+            query_type,
+            ()
+        );
+
+        let planet_collider = Collider {
+            object: planet_handle,
+        };
+
+        // Make the world object thingy
         world.specs_world
             .create_entity()
             .with(Position(Point2::new(0.0, 0.0)))
@@ -53,17 +74,14 @@ impl LevelScene {
                         graphics::Point2::new(0.0, 0.0), 10.0, 1.0)
                     .build(ctx)?
             })
-            .build()
-        ;
+            .with(planet_collider)
+            .build();
 
-        let ball = nc::shape::Ball::new(10.0);
-
-        let dispatcher = Self::register_systems();
         Ok(LevelScene {
             done,
-            ball,
             kiwi,
-            dispatcher
+            dispatcher,
+            collide_world,
         })
     }
 
@@ -77,7 +95,7 @@ impl LevelScene {
         specs::DispatcherBuilder::new()
             .add(MovementSystem, "sys_movement", &[])
             .add(gravity, "sys_gravity", &[])
-            .add(DebugPrinterSystem {}, "sys_debugprint", &[])
+            // .add(DebugPrinterSystem {}, "sys_debugprint", &[])
             .build()
     }
 }
@@ -86,6 +104,11 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn update(&mut self, gameworld: &mut World) -> FSceneSwitch {
         self.dispatcher
             .dispatch(&mut gameworld.specs_world.res);
+
+        for e in self.collide_world.contact_events() {
+            println!("{:?}", e);
+        }
+
         if self.done {
             scene::SceneSwitch::Pop
         } else {

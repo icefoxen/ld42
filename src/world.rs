@@ -29,6 +29,7 @@ impl World {
         self.specs_world.register::<Player>();
         self.specs_world.register::<Sprite>();
         self.specs_world.register::<Mesh>();
+        self.specs_world.register::<Collider>();
     }
 
     pub fn new(ctx: &mut ggez::Context, resource_dir: Option<path::PathBuf>) -> Self {

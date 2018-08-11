@@ -1,4 +1,5 @@
 use ggez;
+use ncollide2d as nc;
 use specs::*;
 use warmy;
 use resources;
@@ -29,14 +30,20 @@ pub struct Mass {
 #[component(NullStorage)]
 pub struct Player;
 
+/// NCollide collision object handle
+#[derive(Clone, Debug, Component)]
+#[component(VecStorage)]
+pub struct Collider {
+    pub object: nc::world::CollisionObjectHandle,
+}
 
-/// Sprite marker
+/// Sprite marker.
+/// Should someday say something about what sprite to draw.
 #[derive(Clone, Debug, Default, Component)]
 #[component(NullStorage)]
 pub struct Sprite {
     //image: warmy::Res<resources::Image>,
 }
-
 
 /// Mesh
 #[derive(Clone, Debug, Component)]

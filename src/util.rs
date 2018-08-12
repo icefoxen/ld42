@@ -11,3 +11,4 @@ use specs;
 pub type Point2 = na::Point2<f32>;
 pub type Vector2 = na::Vector2<f32>;
 pub type CollisionWorld = nc::world::CollisionWorld<f32, specs::Entity>;
+pub type CollisionObject = nc::world::CollisionObject<f32, specs::Entity>;

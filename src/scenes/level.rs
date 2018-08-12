@@ -31,6 +31,10 @@ pub struct LevelScene {
 const CAMERA_WIDTH: f32 = 800.0;
 const CAMERA_HEIGHT: f32 = 600.0;
 
+const PLANET_COLLISION_GROUP: usize = 1;
+const PLAYER_COLLISION_GROUP: usize = 2;
+const OBSTACLE_COLLISION_GROUP: usize = 3;
+
 impl LevelScene {
     pub fn new(ctx: &mut ggez::Context, world: &mut World) -> Result<Self, Err> {
         let done = false;
@@ -66,6 +70,7 @@ impl LevelScene {
         };
         specs::DispatcherBuilder::new()
             .with(gravity, "sys_gravity", &[])
+            .with(PlayerTumbleSystem {}, "sys_tumble", &[])
             // .with(NCollideMotionSystem {}, "sys_motion", &[])
             // .with(DebugPrinterSystem {}, "sys_debugprint", &[])
             .build()
@@ -100,8 +105,11 @@ impl LevelScene {
             .with(Player {
                 on_ground: false,
                 jumping: false,
+                jump_force: 3.0,
                 velocity: 0.0,
                 run_acceleration,
+                tumbling_timer: 0.0,
+                friction: 0.0,
             })
             .with(Motion {
                 velocity: Vector2::new(1.5, 0.0),
@@ -126,7 +134,7 @@ impl LevelScene {
         // Player collision info
         let shape = nc::shape::Cuboid::new(Vector2::new(player_halfwidth, player_halfheight));
         let mut player_collide_group = nc::world::CollisionGroups::new();
-        player_collide_group.set_membership(&[2]);
+        player_collide_group.set_membership(&[PLAYER_COLLISION_GROUP]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
 
         let player_collider = {
@@ -173,7 +181,7 @@ impl LevelScene {
         // Planet collision info
         let ball = nc::shape::Ball::new(planet_radius);
         let mut terrain_collide_group = nc::world::CollisionGroups::new();
-        terrain_collide_group.set_membership(&[1]);
+        terrain_collide_group.set_membership(&[PLANET_COLLISION_GROUP]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
 
         let planet_collider = {
@@ -228,7 +236,9 @@ impl LevelScene {
         // TODO: Figure out membership; must collide with player but not
         // the planet.
         let mut obstacle_collide_group = nc::world::CollisionGroups::new();
-        obstacle_collide_group.set_membership(&[3]);
+        obstacle_collide_group.set_membership(&[OBSTACLE_COLLISION_GROUP]);
+        // obstacle_collide_group.set_whitelist(&[PLAYER_COLLISION_GROUP]);
+        // obstacle_collide_group.set_blacklist(&[PLANET_COLLISION_GROUP]);
         let query_type = nc::world::GeometricQueryType::Contacts(0.0, 0.0);
 
         let obstacle_collider = {
@@ -279,13 +289,23 @@ impl LevelScene {
                             .expect("Invalid collision object handle?");
 
                         // Get the entities out of the collision data
-                        let e1 = cobj1.data();
-                        let e2 = cobj2.data();
-                        for e in &[e1, e2] {
-                            if let Some(player) = player_storage.get_mut(**e) {
-                                player.on_ground = true;
+                        let mut do_collision = |cobj1: &CollisionObject, cobj2: &CollisionObject| {
+                            let e1 = cobj1.data();
+                            if let Some(player) = player_storage.get_mut(*e1) {
+                                // Are we colliding with terrain?
+                                if cobj2.collision_groups().is_member_of(PLANET_COLLISION_GROUP) {
+                                    player.on_ground = true;
+                                } else if cobj2.collision_groups().is_member_of(OBSTACLE_COLLISION_GROUP) && (player.tumbling_timer <= 0.0) {
+                                    debug!("FDSAFSDA");
+                                    player.tumbling_timer = 5.0;
+                                }
                             }
-                        }
+                        };
+
+                        // Same query twice, just inverted...
+                        // TODO: this is annoying, how do we resolve this?
+                        do_collision(cobj1, cobj2);
+                        do_collision(cobj2, cobj1);
                     }
                 }
                 nc::events::ContactEvent::Stopped(cobj_handle1, cobj_handle2) => {
@@ -297,13 +317,20 @@ impl LevelScene {
                             .expect("Invalid collision object handle?");
 
                         // Get the entities out of the collision data
-                        let e1 = cobj1.data();
-                        let e2 = cobj2.data();
-                        for e in &[e1, e2] {
-                            if let Some(player) = player_storage.get_mut(**e) {
-                                player.on_ground = false;
+                        let mut do_collision = |cobj1: &CollisionObject, cobj2: &CollisionObject| {
+                            let e1 = cobj1.data();
+                            if let Some(player) = player_storage.get_mut(*e1) {
+                                // Are we colliding with terrain?
+                                if cobj2.collision_groups().is_member_of(PLANET_COLLISION_GROUP) {
+                                    player.on_ground = false;
+                                }
                             }
-                        }
+                        };
+
+                        // Same query twice, just inverted...
+                        // TODO: this is annoying, how do we resolve this?
+                        do_collision(cobj1, cobj2);
+                        do_collision(cobj2, cobj1);
                     }
                 }
             }
@@ -344,7 +371,7 @@ impl LevelScene {
                 player_motion.acceleration = na::zero();
                 // Jump
                 if player.jumping {
-                    player_motion.acceleration += normal;
+                    player_motion.acceleration += normal * player.jump_force;
                     player.on_ground = false;
                 }
 
@@ -353,8 +380,12 @@ impl LevelScene {
                 let run_speed = rot * (normal * player.velocity);
                 player_motion.acceleration += run_speed * player.run_acceleration;
             }
-            player.velocity += player.run_acceleration;
-            player_motion.velocity += player_motion.acceleration;
+            // The friction term is probably wrong since it will probably slow falling
+            // as well, but fuck it, it doesn't seem to make the player go backwards.
+            player.velocity += player.run_acceleration - (player.velocity * player.friction);
+
+            player_motion.velocity += player_motion.acceleration
+                - (player_motion.velocity * player.friction);
             player_motion.acceleration = na::zero();
 
             // Rotate to stand upright on planet.

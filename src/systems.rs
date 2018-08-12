@@ -64,6 +64,32 @@ impl<'a> specs::System<'a> for GravitySystem {
     }
 }
 
+
+/// Makes the player tumble and slow down after they've
+/// hit something.
+pub struct PlayerTumbleSystem {
+}
+
+impl<'a> specs::System<'a> for PlayerTumbleSystem {
+    type SystemData = (
+        specs::WriteStorage<'a, Player>,
+    );
+
+    fn run(&mut self, (mut player,): Self::SystemData) {
+        for (player,) in (&mut player,).join() {
+            if player.tumbling_timer > 0.0 {
+                println!("Tumbling!");
+                // BUGGO: TODO: Aieeee, time
+                player.tumbling_timer -= 0.1;
+                player.friction = 0.1;
+            } else {
+                player.friction = 0.0;
+            }
+        }
+    }
+}
+
+
 pub struct NCollideMotionSystem {}
 
 impl<'a> specs::System<'a> for NCollideMotionSystem {

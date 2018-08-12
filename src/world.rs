@@ -33,7 +33,6 @@ impl World {
         self.specs_world.register::<Mesh>();
         self.specs_world.register::<Gravity>();
         self.specs_world.register::<Obstacle>();
-
     }
 
     pub fn new(ctx: &mut ggez::Context, resource_dir: Option<path::PathBuf>) -> Self {

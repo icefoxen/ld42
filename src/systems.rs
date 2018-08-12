@@ -5,8 +5,7 @@ use util::*;
 
 use components::*;
 
-pub struct GravitySystem {
-}
+pub struct GravitySystem {}
 
 impl<'a> specs::System<'a> for GravitySystem {
     type SystemData = (
@@ -64,16 +63,12 @@ impl<'a> specs::System<'a> for GravitySystem {
     }
 }
 
-
 /// Makes the player tumble and slow down after they've
 /// hit something.
-pub struct PlayerTumbleSystem {
-}
+pub struct PlayerTumbleSystem {}
 
 impl<'a> specs::System<'a> for PlayerTumbleSystem {
-    type SystemData = (
-        specs::WriteStorage<'a, Player>,
-    );
+    type SystemData = (specs::WriteStorage<'a, Player>,);
 
     fn run(&mut self, (mut player,): Self::SystemData) {
         for (player,) in (&mut player,).join() {
@@ -88,7 +83,6 @@ impl<'a> specs::System<'a> for PlayerTumbleSystem {
         }
     }
 }
-
 
 pub struct NCollideMotionSystem {}
 

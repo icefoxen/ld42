@@ -20,7 +20,8 @@ use world::World;
 
 pub struct LevelScene {
     done: bool,
-    sprite: warmy::Res<resources::Image>,
+    sprites: Vec<warmy::Res<resources::Image>>,
+    sprite_idx: usize,
     dispatcher: specs::Dispatcher<'static, 'static>,
     player_entity: specs::Entity,
     planet_entity: specs::Entity,
@@ -38,10 +39,21 @@ const OBSTACLE_COLLISION_GROUP: usize = 3;
 impl LevelScene {
     pub fn new(ctx: &mut ggez::Context, world: &mut World) -> Result<Self, Err> {
         let done = false;
-        let sprite = world
-            .assets
-            .get::<_, resources::Image>(&warmy::FSKey::new("/images/kiwi.png"), ctx)
-            .unwrap();
+        let sprite_files = vec![
+            "/images/astromonaut0.png",
+            "/images/astromonaut1.png",
+            "/images/astromonaut0.png",
+            "/images/astromonaut2.png",
+        ];
+        let sprites = sprite_files
+            .iter()
+            .map(|filename| {
+                world
+                    .assets
+                    .get::<_, resources::Image>(&warmy::FSKey::new(filename), ctx)
+                    .unwrap()
+            })
+            .collect();
 
         let dispatcher = Self::register_systems();
 
@@ -49,14 +61,20 @@ impl LevelScene {
         let planet_entity = Self::create_planet(ctx, world, planet_radius)?;
         let player_entity = Self::create_player(ctx, world, planet_radius)?;
         for i in 0..10 {
-            let _ = Self::create_obstacle(ctx, world, planet_radius, f32::consts::PI + (i as f32 / 5.0))?;
+            let _ = Self::create_obstacle(
+                ctx,
+                world,
+                planet_radius,
+                f32::consts::PI + (i as f32 / 5.0),
+            )?;
         }
 
         let background_mesh = Self::create_background_mesh(ctx)?;
 
         Ok(LevelScene {
             done,
-            sprite,
+            sprites,
+            sprite_idx: 0,
             dispatcher,
             player_entity,
             planet_entity,
@@ -66,8 +84,7 @@ impl LevelScene {
     }
 
     fn register_systems() -> specs::Dispatcher<'static, 'static> {
-        let gravity = GravitySystem {
-        };
+        let gravity = GravitySystem {};
         specs::DispatcherBuilder::new()
             .with(gravity, "sys_gravity", &[])
             .with(PlayerTumbleSystem {}, "sys_tumble", &[])
@@ -87,17 +104,21 @@ impl LevelScene {
                 graphics::DrawMode::Fill,
                 graphics::Point2::new(x, y),
                 2.0,
-                2.0);
+                2.0,
+            );
         }
-        mb.build(ctx)
-            .map_err(Err::from)
+        mb.build(ctx).map_err(Err::from)
     }
 
-    fn create_player(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32) -> Result<specs::Entity, Err> {
-        let player_halfwidth = 10.0;
-        let player_halfheight = 20.0;
+    fn create_player(
+        ctx: &mut ggez::Context,
+        world: &mut World,
+        planet_radius: f32,
+    ) -> Result<specs::Entity, Err> {
+        let player_halfwidth = 8.0;
+        let player_halfheight = 16.0;
         let run_acceleration = 0.01;
-        let player_offset = planet_radius + player_halfheight*3.0;
+        let player_offset = planet_radius + player_halfheight * 3.0;
         // Make the player entity
         let entity = world
             .specs_world
@@ -116,19 +137,20 @@ impl LevelScene {
                 acceleration: Vector2::new(0.0, 0.0),
             })
             .with(Mass {})
-            .with(Mesh {
-                mesh: graphics::MeshBuilder::default()
-                    .polygon(
-                        graphics::DrawMode::Line(2.0),
-                        &[
-                            graphics::Point2::new(-player_halfwidth, -player_halfheight),
-                            graphics::Point2::new(-player_halfwidth, player_halfheight),
-                            graphics::Point2::new(player_halfwidth, player_halfheight),
-                            graphics::Point2::new(player_halfwidth, -player_halfheight),
-                        ],
-                    )
-                    .build(ctx)?,
-            })
+            .with(Sprite {})
+            // .with(Mesh {
+            //     mesh: graphics::MeshBuilder::default()
+            //         .polygon(
+            //             graphics::DrawMode::Line(2.0),
+            //             &[
+            //                 graphics::Point2::new(-player_halfwidth, -player_halfheight),
+            //                 graphics::Point2::new(-player_halfwidth, player_halfheight),
+            //                 graphics::Point2::new(player_halfwidth, player_halfheight),
+            //                 graphics::Point2::new(player_halfwidth, -player_halfheight),
+            //             ],
+            //         )
+            //         .build(ctx)?,
+            // })
             .build();
 
         // Player collision info
@@ -152,11 +174,18 @@ impl LevelScene {
             }
         };
         // Insert the collider.
-        world.specs_world.write_storage::<Collider>().insert(entity, player_collider)?;
+        world
+            .specs_world
+            .write_storage::<Collider>()
+            .insert(entity, player_collider)?;
         Ok(entity)
     }
 
-    fn create_planet(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32) -> Result<specs::Entity, Err> {
+    fn create_planet(
+        ctx: &mut ggez::Context,
+        world: &mut World,
+        planet_radius: f32,
+    ) -> Result<specs::Entity, Err> {
         let gravity = 200.0;
         // Make the world entity
         let entity = world
@@ -172,10 +201,7 @@ impl LevelScene {
                     )
                     .build(ctx)?,
             })
-            .with(Gravity {
-                    force: gravity,
-                }
-            )
+            .with(Gravity { force: gravity })
             .build();
 
         // Planet collision info
@@ -199,14 +225,21 @@ impl LevelScene {
             }
         };
         // Insert the collider.
-        world.specs_world.write_storage::<Collider>().insert(entity, planet_collider)?;
+        world
+            .specs_world
+            .write_storage::<Collider>()
+            .insert(entity, planet_collider)?;
         Ok(entity)
     }
 
-
     /// Creates an obstacle on the planet at the given angle.
     /// Assumes the planet is at 0,0 I guess
-    fn create_obstacle(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32, angle: f32) -> Result<specs::Entity, Err> {
+    fn create_obstacle(
+        ctx: &mut ggez::Context,
+        world: &mut World,
+        planet_radius: f32,
+        angle: f32,
+    ) -> Result<specs::Entity, Err> {
         let obstacle_halfwidth = 10.0;
         let obstacle_offset = planet_radius + obstacle_halfwidth;
         // Make the player entity
@@ -247,10 +280,7 @@ impl LevelScene {
             let x = f32::cos(angle) * obstacle_offset;
             let y = f32::sin(angle) * obstacle_offset;
             let handle = collide_world.add(
-                na::Isometry2::new(
-                    na::Vector2::new(x,y),
-                    angle,
-                ),
+                na::Isometry2::new(na::Vector2::new(x, y), angle),
                 nc::shape::ShapeHandle::new(shape.clone()),
                 obstacle_collide_group,
                 query_type,
@@ -262,9 +292,11 @@ impl LevelScene {
             }
         };
         // Insert the collider.
-        world.specs_world.write_storage::<Collider>().insert(entity, obstacle_collider)?;
+        world
+            .specs_world
+            .write_storage::<Collider>()
+            .insert(entity, obstacle_collider)?;
         Ok(entity)
-
     }
 
     fn handle_contact_events(&mut self, gameworld: &mut World) {
@@ -281,26 +313,37 @@ impl LevelScene {
                     // It's apparently possible for the collision pair to have
                     // no contacts...
                     // Possibly if one object is entirely inside another?
-                    if let Some(pair) = (&*collide_world).contact_pair(*cobj_handle1, *cobj_handle2) {
+                    if let Some(pair) = (&*collide_world).contact_pair(*cobj_handle1, *cobj_handle2)
+                    {
                         pair.contacts(contacts_list);
-                        let cobj1 = collide_world.collision_object(*cobj_handle1)
+                        let cobj1 = collide_world
+                            .collision_object(*cobj_handle1)
                             .expect("Invalid collision object handle?");
-                        let cobj2 = collide_world.collision_object(*cobj_handle2)
+                        let cobj2 = collide_world
+                            .collision_object(*cobj_handle2)
                             .expect("Invalid collision object handle?");
 
                         // Get the entities out of the collision data
-                        let mut do_collision = |cobj1: &CollisionObject, cobj2: &CollisionObject| {
-                            let e1 = cobj1.data();
-                            if let Some(player) = player_storage.get_mut(*e1) {
-                                // Are we colliding with terrain?
-                                if cobj2.collision_groups().is_member_of(PLANET_COLLISION_GROUP) {
-                                    player.on_ground = true;
-                                } else if cobj2.collision_groups().is_member_of(OBSTACLE_COLLISION_GROUP) && (player.tumbling_timer <= 0.0) {
-                                    debug!("FDSAFSDA");
-                                    player.tumbling_timer = 5.0;
+                        let mut do_collision =
+                            |cobj1: &CollisionObject, cobj2: &CollisionObject| {
+                                let e1 = cobj1.data();
+                                if let Some(player) = player_storage.get_mut(*e1) {
+                                    // Are we colliding with terrain?
+                                    if cobj2
+                                        .collision_groups()
+                                        .is_member_of(PLANET_COLLISION_GROUP)
+                                    {
+                                        player.on_ground = true;
+                                    } else if cobj2
+                                        .collision_groups()
+                                        .is_member_of(OBSTACLE_COLLISION_GROUP)
+                                        && (player.tumbling_timer <= 0.0)
+                                    {
+                                        debug!("FDSAFSDA");
+                                        player.tumbling_timer = 5.0;
+                                    }
                                 }
-                            }
-                        };
+                            };
 
                         // Same query twice, just inverted...
                         // TODO: this is annoying, how do we resolve this?
@@ -309,23 +352,30 @@ impl LevelScene {
                     }
                 }
                 nc::events::ContactEvent::Stopped(cobj_handle1, cobj_handle2) => {
-                    if let Some(pair) = (&*collide_world).contact_pair(*cobj_handle1, *cobj_handle2) {
+                    if let Some(pair) = (&*collide_world).contact_pair(*cobj_handle1, *cobj_handle2)
+                    {
                         pair.contacts(contacts_list);
-                        let cobj1 = collide_world.collision_object(*cobj_handle1)
+                        let cobj1 = collide_world
+                            .collision_object(*cobj_handle1)
                             .expect("Invalid collision object handle?");
-                        let cobj2 = collide_world.collision_object(*cobj_handle2)
+                        let cobj2 = collide_world
+                            .collision_object(*cobj_handle2)
                             .expect("Invalid collision object handle?");
 
                         // Get the entities out of the collision data
-                        let mut do_collision = |cobj1: &CollisionObject, cobj2: &CollisionObject| {
-                            let e1 = cobj1.data();
-                            if let Some(player) = player_storage.get_mut(*e1) {
-                                // Are we colliding with terrain?
-                                if cobj2.collision_groups().is_member_of(PLANET_COLLISION_GROUP) {
-                                    player.on_ground = false;
+                        let mut do_collision =
+                            |cobj1: &CollisionObject, cobj2: &CollisionObject| {
+                                let e1 = cobj1.data();
+                                if let Some(player) = player_storage.get_mut(*e1) {
+                                    // Are we colliding with terrain?
+                                    if cobj2
+                                        .collision_groups()
+                                        .is_member_of(PLANET_COLLISION_GROUP)
+                                    {
+                                        player.on_ground = false;
+                                    }
                                 }
-                            }
-                        };
+                            };
 
                         // Same query twice, just inverted...
                         // TODO: this is annoying, how do we resolve this?
@@ -337,23 +387,30 @@ impl LevelScene {
         }
     }
 
-
-
     /// This is really hard to express as a specs System so we roll our own.
     fn run_player_motion(&mut self, world: &mut World) {
-        if let Some(player) = world.specs_world.write_storage::<Player>().get_mut(self.player_entity) {
+        if let Some(player) = world
+            .specs_world
+            .write_storage::<Player>()
+            .get_mut(self.player_entity)
+        {
             let mut colliders = world.specs_world.write_storage::<Collider>();
             let mut motions = world.specs_world.write_storage::<Motion>();
             let mut ncollide_world = world.specs_world.write_resource::<CollisionWorld>();
 
-            let player_motion = motions.get_mut(self.player_entity)
+            let player_motion = motions
+                .get_mut(self.player_entity)
                 .expect("Player w/o motion?");
-            let player_collider = colliders.get(self.player_entity)
+            let player_collider = colliders
+                .get(self.player_entity)
                 .expect("Player w/o motion?");
-            let (player_position, _player_rotation) = collision_object_position(&*ncollide_world, &player_collider);
-            let planet_collider = colliders.get(self.planet_entity)
+            let (player_position, _player_rotation) =
+                collision_object_position(&*ncollide_world, &player_collider);
+            let planet_collider = colliders
+                .get(self.planet_entity)
                 .expect("Planet w/o collider?");
-            let (planet_position, _planet_rotation) = collision_object_position(&*ncollide_world, planet_collider);
+            let (planet_position, _planet_rotation) =
+                collision_object_position(&*ncollide_world, planet_collider);
 
             let offset = player_position - planet_position;
             let normal = offset / na::norm(&offset);
@@ -384,8 +441,8 @@ impl LevelScene {
             // as well, but fuck it, it doesn't seem to make the player go backwards.
             player.velocity += player.run_acceleration - (player.velocity * player.friction);
 
-            player_motion.velocity += player_motion.acceleration
-                - (player_motion.velocity * player.friction);
+            player_motion.velocity +=
+                player_motion.acceleration - (player_motion.velocity * player.friction);
             player_motion.acceleration = na::zero();
 
             // Rotate to stand upright on planet.
@@ -398,12 +455,16 @@ impl LevelScene {
                         "Invalid collision object; was it removed from ncollide but not specs?",
                     );
                 let mut new_position = collision_obj.position().clone();
-                new_position.append_translation_mut(&na::Translation::from_vector(player_motion.velocity));
+                new_position
+                    .append_translation_mut(&na::Translation::from_vector(player_motion.velocity));
                 new_position.rotation = na::UnitComplex::from_angle(player_angle);
                 new_position
             };
             ncollide_world.set_position(player_collider.object_handle, new_position);
-            self.camera_focus = Point2::new(new_position.translation.vector.x, new_position.translation.vector.y);
+            self.camera_focus = Point2::new(
+                new_position.translation.vector.x,
+                new_position.translation.vector.y,
+            );
         }
     }
 }
@@ -424,8 +485,6 @@ fn collision_object_position(
     (annoying_new_pos, annoying_new_angle)
 }
 
-
-
 /// augh
 ///
 /// Mainly used for drawing, so it returns ggez's Point type rather than ncollide's.
@@ -437,13 +496,13 @@ fn ggez_collision_object_position(
     (graphics::Point2::new(point.x, point.y), rotation)
 }
 
-
 impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn update(&mut self, gameworld: &mut World) -> FSceneSwitch {
         self.run_player_motion(gameworld);
         self.dispatcher.dispatch(&mut gameworld.specs_world.res);
 
         self.handle_contact_events(gameworld);
+        self.sprite_idx += 1;
         if self.done {
             scene::SceneSwitch::Pop
         } else {
@@ -454,8 +513,8 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
     fn draw(&mut self, gameworld: &mut World, ctx: &mut ggez::Context) -> ggez::GameResult<()> {
         // Focus view on player.
         let screen_rect = graphics::Rect {
-            x: self.camera_focus.x - CAMERA_WIDTH/2.0,
-            y: self.camera_focus.y - CAMERA_HEIGHT/2.0,
+            x: self.camera_focus.x - CAMERA_WIDTH / 2.0,
+            y: self.camera_focus.y - CAMERA_HEIGHT / 2.0,
             w: CAMERA_WIDTH,
             h: CAMERA_HEIGHT,
         };
@@ -465,17 +524,21 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         graphics::draw(ctx, &self.background_mesh, ggez::nalgebra::origin(), 0.0)?;
 
         let sprite = gameworld.specs_world.read_storage::<Sprite>();
+        let player = gameworld.specs_world.read_storage::<Player>();
         let mesh = gameworld.specs_world.read_storage::<Mesh>();
         let collider = gameworld.specs_world.read_storage::<Collider>();
         let ncollide_world = gameworld.specs_world.read_resource::<CollisionWorld>();
-        for (c, _) in (&collider, &sprite).join() {
+        for (c, _, player) in (&collider, &sprite, &player).join() {
             let (pos, angle) = ggez_collision_object_position(&*ncollide_world, c);
+            let corrected_pos = pos; // - graphics::Vector2::new(8.0, 16.0);
+            // BUGGO: Behold, the shittiest animation timing known to man or god
             graphics::draw_ex(
                 ctx,
-                &(self.sprite.borrow().0),
+                &(self.sprites[(self.sprite_idx / 10) % self.sprites.len()].borrow().0),
                 graphics::DrawParam {
-                    dest: pos,
-                    rotation: angle,
+                    dest: corrected_pos,
+                    rotation: angle - player.tumbling_timer,
+                    offset: graphics::Point2::new(0.5, 0.5),
                     ..graphics::DrawParam::default()
                 },
             )?;
@@ -497,17 +560,19 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         let player_storage = gameworld.specs_world.read_storage::<Player>();
         let player_component = player_storage.get(self.player_entity).expect("No player?");
 
-        let text_point = graphics::Point2::new(10.0, 10.0);
-        let velocity_point = graphics::Point2::new(10.0, 30.0);
-        if player_component.on_ground {
-            let t = ggez::graphics::TextCached::new("On ground")?;
-            t.queue(ctx, text_point, None);
-        } else {
-            let t = ggez::graphics::TextCached::new("Not on ground")?;
-            t.queue(ctx, text_point, None);
-        }
-        let t = ggez::graphics::TextCached::new(format!("Velocity: {}", player_component.velocity))?;
-        t.queue(ctx, velocity_point, None);
+        // let text_point = graphics::Point2::new(10.0, 10.0);
+        let velocity_point = graphics::Point2::new(10.0, 10.0);
+        let text_color = Some(graphics::Color::new(1.0, 0.0, 0.0, 1.0));
+        // if player_component.on_ground {
+        //     let t = ggez::graphics::TextCached::new("On ground")?;
+        //     t.queue(ctx, text_point, text_color);
+        // } else {
+        //     let t = ggez::graphics::TextCached::new("Not on ground")?;
+        //     t.queue(ctx, text_point, text_color);
+        // }
+        let t =
+            ggez::graphics::TextCached::new(format!("Velocity: {}", player_component.velocity))?;
+        t.queue(ctx, velocity_point, text_color);
         graphics::TextCached::draw_queued(ctx, graphics::DrawParam::default())?;
         Ok(())
     }
@@ -520,7 +585,11 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         if gameworld.input.get_button_pressed(input::Button::Menu) {
             gameworld.quit = true;
         }
-        if let Some(player) = gameworld.specs_world.write_storage::<Player>().get_mut(self.player_entity) {
+        if let Some(player) = gameworld
+            .specs_world
+            .write_storage::<Player>()
+            .get_mut(self.player_entity)
+        {
             player.jumping = gameworld.input.get_button_pressed(input::Button::Jump);
             // player.walk_direction = gameworld.input.get_axis(input::Axis::Horz);
         }

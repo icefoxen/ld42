@@ -11,7 +11,7 @@ opt-level = 1
 [dependencies]
 # Game stuff
 ggez = "0.4"
-ggez-goodies = { git = "https://github.com/ggez/ggez-goodies", branch = "master" }
+ggez-goodies = { git = "https://github.com/ggez/ggez-goodies", rev = "aacd12867d886b0331478ab616dcb35e337643a8" }
 specs = "0.12"
 specs-derive = "0.2"
 warmy = "0.7"

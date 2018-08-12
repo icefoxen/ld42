@@ -60,12 +60,13 @@ impl LevelScene {
         let planet_radius = 2000.0;
         let planet_entity = Self::create_planet(ctx, world, planet_radius)?;
         let player_entity = Self::create_player(ctx, world, planet_radius)?;
-        for i in 0..10 {
+        for _i in 0..20 {
+            let obstacle_offset = rand::random::<f32>() * 2.0 * f32::consts::PI;
             let _ = Self::create_obstacle(
                 ctx,
                 world,
                 planet_radius,
-                f32::consts::PI + (i as f32 / 5.0),
+                obstacle_offset,
             )?;
         }
 
@@ -94,8 +95,8 @@ impl LevelScene {
     }
 
     fn create_background_mesh(ctx: &mut ggez::Context) -> Result<graphics::Mesh, Err> {
-        let num_stars = 5000;
-        let star_max_bounds = 5000.0;
+        let num_stars = 10000;
+        let star_max_bounds = 10000.0;
         let mut mb = graphics::MeshBuilder::new();
         for _ in 0..num_stars {
             let x = rand::random::<f32>() * star_max_bounds - (star_max_bounds / 2.0);
@@ -117,7 +118,7 @@ impl LevelScene {
     ) -> Result<specs::Entity, Err> {
         let player_halfwidth = 8.0;
         let player_halfheight = 16.0;
-        let run_acceleration = 0.01;
+        let run_acceleration = 0.005;
         let player_offset = planet_radius + player_halfheight * 3.0;
         // Make the player entity
         let entity = world
@@ -138,19 +139,6 @@ impl LevelScene {
             })
             .with(Mass {})
             .with(Sprite {})
-            // .with(Mesh {
-            //     mesh: graphics::MeshBuilder::default()
-            //         .polygon(
-            //             graphics::DrawMode::Line(2.0),
-            //             &[
-            //                 graphics::Point2::new(-player_halfwidth, -player_halfheight),
-            //                 graphics::Point2::new(-player_halfwidth, player_halfheight),
-            //                 graphics::Point2::new(player_halfwidth, player_halfheight),
-            //                 graphics::Point2::new(player_halfwidth, -player_halfheight),
-            //             ],
-            //         )
-            //         .build(ctx)?,
-            // })
             .build();
 
         // Player collision info

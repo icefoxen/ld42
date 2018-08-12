@@ -36,18 +36,22 @@ impl scene::Scene<World, input::InputEvent> for MenuScene {
 Running In To Space
 
 
+You are an astronaut trapped on a remote planet and need to
+run your way into orbit!
 
-Not actually done, but close!  You are an astronaut
-trapped on a remote planet and need to run your way into orbit!
+Not actually done, but close!  There's no win condition
+detection, and there were supposed to be more levels and
+different hazards and such.
 
 
 
-Directions: You will start running, just press Z to jump over obstacles.
+Directions: You will start running, just press Z to jump
+over obstacles.
 Escape key quits.
 
 
 
-Press Z to continue!
+Press Z to begin!
 "#)?;
 
         t.queue(ctx, graphics::Point2::new(200.0, 100.0), Some(graphics::WHITE));

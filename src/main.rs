@@ -153,7 +153,7 @@ impl EventHandler for MainState {
 pub fn main() {
     setup_logger().expect("Could not set up logging!");
     let mut cb = ContextBuilder::new("ld42", "icefoxen")
-        .window_setup(conf::WindowSetup::default().title("game-template"))
+        .window_setup(conf::WindowSetup::default().title("Running In To Space"))
         .window_mode(conf::WindowMode::default().dimensions(800, 600));
 
     // We add the CARGO_MANIFEST_DIR/resources to the filesystems paths so

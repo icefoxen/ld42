@@ -4,6 +4,7 @@ use input;
 use world::World;
 
 pub mod level;
+pub mod menu;
 
 // Shortcuts for our scene type.
 pub type FSceneSwitch = scene::SceneSwitch<World, input::InputEvent>;

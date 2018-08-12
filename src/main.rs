@@ -92,10 +92,12 @@ impl MainState {
     pub fn new(resource_dir: Option<path::PathBuf>, ctx: &mut Context) -> Self {
         let world = world::World::new(ctx, resource_dir.clone());
         let mut scenestack = scenes::FSceneStack::new(ctx, world);
-        let initial_scene = scenes::level::LevelScene::new(ctx, &mut scenestack.world)
+        let level_scene = scenes::level::LevelScene::new(ctx, &mut scenestack.world)
             .expect("Could not create initial scene?!");
         graphics::set_background_color(ctx, graphics::BLACK);
-        scenestack.push(Box::new(initial_scene));
+        scenestack.push(Box::new(level_scene));
+        let menu_scene = scenes::menu::MenuScene::new();
+        scenestack.push(Box::new(menu_scene));
         MainState {
             scenes: scenestack,
             input_binding: input::create_input_binding(),
@@ -113,7 +115,7 @@ impl EventHandler for MainState {
         self.scenes.world.input.update(1.0 / 60.0);
 
         if self.scenes.world.quit {
-            warn!("Exiting due to world quit flag.");
+            info!("Exiting due to world quit flag.");
             ctx.quit()?;
         }
 

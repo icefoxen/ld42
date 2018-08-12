@@ -11,6 +11,7 @@ extern crate ggez_goodies;
 extern crate log;
 extern crate nalgebra;
 extern crate ncollide2d;
+extern crate rand;
 extern crate specs;
 #[macro_use]
 extern crate specs_derive;

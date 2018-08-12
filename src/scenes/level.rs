@@ -3,8 +3,11 @@ use ggez::graphics;
 use ggez_goodies::scene;
 use nalgebra as na;
 use ncollide2d as nc;
+use rand;
 use specs::{self, Builder, Join};
 use warmy;
+
+use std::f32;
 
 use components::*;
 use error::Err;
@@ -22,6 +25,7 @@ pub struct LevelScene {
     player_entity: specs::Entity,
     planet_entity: specs::Entity,
     camera_focus: Point2,
+    background_mesh: graphics::Mesh,
 }
 
 const CAMERA_WIDTH: f32 = 800.0;
@@ -40,7 +44,11 @@ impl LevelScene {
         let planet_radius = 2000.0;
         let planet_entity = Self::create_planet(ctx, world, planet_radius)?;
         let player_entity = Self::create_player(ctx, world, planet_radius)?;
-        let _ = Self::create_obstacle(ctx, world, planet_radius, 1.0)?;
+        for i in 0..10 {
+            let _ = Self::create_obstacle(ctx, world, planet_radius, f32::consts::PI + (i as f32 / 5.0))?;
+        }
+
+        let background_mesh = Self::create_background_mesh(ctx)?;
 
         Ok(LevelScene {
             done,
@@ -48,6 +56,7 @@ impl LevelScene {
             dispatcher,
             player_entity,
             planet_entity,
+            background_mesh,
             camera_focus: na::origin(),
         })
     }
@@ -60,6 +69,23 @@ impl LevelScene {
             // .with(NCollideMotionSystem {}, "sys_motion", &[])
             // .with(DebugPrinterSystem {}, "sys_debugprint", &[])
             .build()
+    }
+
+    fn create_background_mesh(ctx: &mut ggez::Context) -> Result<graphics::Mesh, Err> {
+        let num_stars = 5000;
+        let star_max_bounds = 5000.0;
+        let mut mb = graphics::MeshBuilder::new();
+        for _ in 0..num_stars {
+            let x = rand::random::<f32>() * star_max_bounds - (star_max_bounds / 2.0);
+            let y = rand::random::<f32>() * star_max_bounds - (star_max_bounds / 2.0);
+            mb.circle(
+                graphics::DrawMode::Fill,
+                graphics::Point2::new(x, y),
+                2.0,
+                2.0);
+        }
+        mb.build(ctx)
+            .map_err(Err::from)
     }
 
     fn create_player(ctx: &mut ggez::Context, world: &mut World, planet_radius: f32) -> Result<specs::Entity, Err> {
@@ -323,7 +349,6 @@ impl LevelScene {
                 }
 
                 // Walk
-                use std::f32;
                 let rot = na::Rotation2::new(f32::consts::PI / 2.0);
                 let run_speed = rot * (normal * player.velocity);
                 player_motion.acceleration += run_speed * player.run_acceleration;
@@ -404,6 +429,10 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
             h: CAMERA_HEIGHT,
         };
         graphics::set_screen_coordinates(ctx, screen_rect)?;
+
+        // Draw background
+        graphics::draw(ctx, &self.background_mesh, ggez::nalgebra::origin(), 0.0)?;
+
         let sprite = gameworld.specs_world.read_storage::<Sprite>();
         let mesh = gameworld.specs_world.read_storage::<Mesh>();
         let collider = gameworld.specs_world.read_storage::<Collider>();

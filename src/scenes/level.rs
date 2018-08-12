@@ -339,7 +339,6 @@ impl LevelScene {
                                         .is_member_of(OBSTACLE_COLLISION_GROUP)
                                         && (player.tumbling_timer <= 0.0)
                                     {
-                                        debug!("FDSAFSDA");
                                         player.tumbling_timer = 5.0;
                                     }
                                 }
@@ -562,7 +561,7 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
 
         // let text_point = graphics::Point2::new(10.0, 10.0);
         let velocity_point = graphics::Point2::new(10.0, 10.0);
-        let text_color = Some(graphics::Color::new(1.0, 0.0, 0.0, 1.0));
+        let text_color = Some(graphics::WHITE);
         // if player_component.on_ground {
         //     let t = ggez::graphics::TextCached::new("On ground")?;
         //     t.queue(ctx, text_point, text_color);
@@ -571,7 +570,16 @@ impl scene::Scene<World, input::InputEvent> for LevelScene {
         //     t.queue(ctx, text_point, text_color);
         // }
         let t =
-            ggez::graphics::TextCached::new(format!("Velocity: {}", player_component.velocity))?;
+            ggez::graphics::TextCached::new(format!("Velocity: {:0.1}", player_component.velocity))?;
+
+        // Ghetto text outline
+        let outline_distance = 1.0;
+        t.queue(ctx, velocity_point + graphics::Vector2::new(outline_distance, 0.0), Some(graphics::BLACK));
+        t.queue(ctx, velocity_point + graphics::Vector2::new(-outline_distance, 0.0), Some(graphics::BLACK));
+        t.queue(ctx, velocity_point + graphics::Vector2::new(0.0, outline_distance), Some(graphics::BLACK));
+        t.queue(ctx, velocity_point + graphics::Vector2::new(0.0, -outline_distance), Some(graphics::BLACK));
+
+
         t.queue(ctx, velocity_point, text_color);
         graphics::TextCached::draw_queued(ctx, graphics::DrawParam::default())?;
         Ok(())

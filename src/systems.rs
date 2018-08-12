@@ -73,7 +73,6 @@ impl<'a> specs::System<'a> for PlayerTumbleSystem {
     fn run(&mut self, (mut player,): Self::SystemData) {
         for (player,) in (&mut player,).join() {
             if player.tumbling_timer > 0.0 {
-                println!("Tumbling!");
                 // BUGGO: TODO: Aieeee, time
                 player.tumbling_timer -= 0.1;
                 player.friction = 0.1;

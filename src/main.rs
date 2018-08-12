@@ -159,6 +159,7 @@ pub fn main() {
     // We add the CARGO_MANIFEST_DIR/resources to the filesystems paths so
     // we we look in the cargo project for files.
     // And save it so we can feed there result into warmy
+
     let cargo_path: Option<path::PathBuf> = option_env!("CARGO_MANIFEST_DIR").map(|env_path| {
         let mut res_path = path::PathBuf::from(env_path);
         res_path.push("resources");
@@ -170,9 +171,11 @@ pub fn main() {
         cb = cb.add_resource_path(s);
     }
 
-    let ctx = &mut cb.build().unwrap();
 
-    let state = &mut MainState::new(cargo_path, ctx);
+    let ctx = &mut cb.build().unwrap();
+    // This None could be cargo_path
+    // but only in dev mode; blarg.  Need to make the filesystem shit better still.
+    let state = &mut MainState::new(None, ctx);
     if let Err(e) = event::run(ctx, state) {
         println!("Error encountered: {}", e);
     } else {
